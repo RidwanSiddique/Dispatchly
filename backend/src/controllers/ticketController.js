@@ -1,6 +1,7 @@
 const pool = require('../db/pool');
 const { SLA_MINUTES, ESCALATION_TEAMS, REQUESTER_ROLES } = require('../config/constants');
 const { enrich } = require('../utils/sla');
+const { getCurrentOncallUser } = require('./oncallController');
 
 // ─── Notification helpers ─────────────────────────────────────────────────────
 
@@ -245,12 +246,49 @@ const createTicket = async (req, res, next) => {
       ]
     );
 
+    const shortTitle = ticket.title.slice(0, 60) + (ticket.title.length > 60 ? '…' : '');
+
+    // P1 auto-assign to on-call technician
+    if (priority === 'P1') {
+      try {
+        const oncallUser = await getCurrentOncallUser();
+        if (oncallUser) {
+          await pool.query(
+            `UPDATE tickets
+               SET assigned_to_user_id = $1, assignment_status = 'pending_acceptance', updated_at = NOW()
+             WHERE id = $2`,
+            [oncallUser.id, ticket.id]
+          );
+          ticket.assigned_to_user_id = oncallUser.id;
+          ticket.assignment_status = 'pending_acceptance';
+
+          // Page the on-call user
+          await notifyUser(
+            oncallUser.id, ticket.id, 'sla_breached',
+            `🚨 P1 AUTO-ASSIGNED: "${shortTitle}" — you are on call. Please respond immediately.`
+          );
+
+          // Also notify managers
+          const { rows: managers } = await pool.query(
+            `SELECT id FROM users WHERE role IN ('admin','manager') AND is_active = TRUE`
+          );
+          await Promise.all(
+            managers.map((m) =>
+              notifyUser(m.id, ticket.id, 'ticket_assigned',
+                `P1 ticket auto-assigned to ${oncallUser.name}: "${shortTitle}"`)
+            )
+          );
+        }
+      } catch {
+        // Non-fatal — ticket still created, just not auto-assigned
+      }
+    }
+
     // Notify managers + admins when a requester opens a new ticket
     if (isRequester) {
       const { rows: staff } = await pool.query(
         `SELECT id FROM users WHERE role IN ('admin','manager') AND is_active = TRUE`
       );
-      const shortTitle = ticket.title.slice(0, 60) + (ticket.title.length > 60 ? '…' : '');
       const msg = `New ticket from ${requester_name}: "${shortTitle}"`;
       await Promise.all(
         staff.map((s) =>
@@ -327,6 +365,20 @@ const updateTicket = async (req, res, next) => {
     );
 
     if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
+
+    // ── Auto-set assignment_status when assigned_to_user_id changes ─────────
+    if (
+      req.body.assigned_to_user_id !== undefined &&
+      req.body.assigned_to_user_id !== oldTicket.assigned_to_user_id
+    ) {
+      const newStatus = req.body.assigned_to_user_id ? 'pending_acceptance' : 'unassigned';
+      await pool.query(
+        'UPDATE tickets SET assignment_status = $1 WHERE id = $2',
+        [newStatus, req.params.id]
+      );
+      // Update local copy so notification logic below sees correct state
+      ticket.assignment_status = newStatus;
+    }
 
     // ── Notifications ───────────────────────────────────────────────────────
     const shortTitle = ticket.title.slice(0, 60) + (ticket.title.length > 60 ? '…' : '');
@@ -569,6 +621,93 @@ const convertToKb = async (req, res, next) => {
   }
 };
 
+/**
+ * POST /api/tickets/:id/accept — technician accepts their assignment
+ */
+const acceptAssignment = async (req, res, next) => {
+  try {
+    const { userId, name: actorName } = req.user;
+    const {
+      rows: [ticket],
+    } = await pool.query('SELECT * FROM tickets WHERE id = $1', [req.params.id]);
+    if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
+    if (ticket.assigned_to_user_id !== userId) {
+      return res.status(403).json({ error: 'This ticket is not assigned to you' });
+    }
+    if (ticket.assignment_status !== 'pending_acceptance') {
+      return res.status(400).json({ error: 'Assignment is not pending acceptance' });
+    }
+
+    await pool.query(
+      `UPDATE tickets SET assignment_status = 'accepted', updated_at = NOW() WHERE id = $1`,
+      [ticket.id]
+    );
+
+    // Notify admin/manager
+    const shortTitle = ticket.title.slice(0, 60) + (ticket.title.length > 60 ? '…' : '');
+    const { rows: managers } = await pool.query(
+      `SELECT id FROM users WHERE role IN ('admin','manager') AND is_active = TRUE`
+    );
+    await Promise.all(
+      managers.map((m) =>
+        notifyUser(
+          m.id, ticket.id, 'ticket_assigned',
+          `${actorName} accepted assignment of ticket "${shortTitle}"`
+        )
+      )
+    );
+
+    res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * POST /api/tickets/:id/decline — technician declines their assignment
+ */
+const declineAssignment = async (req, res, next) => {
+  try {
+    const { userId, name: actorName } = req.user;
+    const { reason } = req.body;
+
+    const {
+      rows: [ticket],
+    } = await pool.query('SELECT * FROM tickets WHERE id = $1', [req.params.id]);
+    if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
+    if (ticket.assigned_to_user_id !== userId) {
+      return res.status(403).json({ error: 'This ticket is not assigned to you' });
+    }
+    if (ticket.assignment_status !== 'pending_acceptance') {
+      return res.status(400).json({ error: 'Assignment is not pending acceptance' });
+    }
+
+    // Clear assignment
+    await pool.query(
+      `UPDATE tickets
+         SET assigned_to_user_id = NULL, assignment_status = 'unassigned', updated_at = NOW()
+       WHERE id = $1`,
+      [ticket.id]
+    );
+
+    // Notify admin/manager
+    const shortTitle = ticket.title.slice(0, 60) + (ticket.title.length > 60 ? '…' : '');
+    const msg = reason
+      ? `${actorName} declined ticket "${shortTitle}": ${reason}`
+      : `${actorName} declined ticket "${shortTitle}" — needs reassignment`;
+    const { rows: managers } = await pool.query(
+      `SELECT id FROM users WHERE role IN ('admin','manager') AND is_active = TRUE`
+    );
+    await Promise.all(
+      managers.map((m) => notifyUser(m.id, ticket.id, 'ticket_assigned', msg))
+    );
+
+    res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   getTickets,
   getTicket,
@@ -577,4 +716,6 @@ module.exports = {
   escalateTicket,
   addComment,
   convertToKb,
+  acceptAssignment,
+  declineAssignment,
 };

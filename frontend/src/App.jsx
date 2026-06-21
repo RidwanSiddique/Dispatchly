@@ -3,11 +3,19 @@ import { createBrowserRouter, RouterProvider, redirect } from 'react-router-dom'
 import { Layout } from './components/layout/Layout';
 import { AdminUsersPage, adminUsersAction, adminUsersLoader } from './pages/AdminUsersPage';
 import CatalogPage, { catalogAction, catalogLoader } from './pages/CatalogPage';
+import ChangeDetailPage, { changeDetailAction, changeDetailLoader } from './pages/ChangeDetailPage';
+import ChangesPage, { changesAction, changesLoader } from './pages/ChangesPage';
 import { DashboardPage, dashboardLoader } from './pages/DashboardPage';
 import { KbArticlePage, kbArticleLoader } from './pages/KbArticlePage';
 import { KbPage, kbLoader } from './pages/KbPage';
 import LoginPage, { loginAction } from './pages/LoginPage';
 import { NewTicketPage, newTicketAction } from './pages/NewTicketPage';
+import OnCallPage, { onCallAction, onCallLoader } from './pages/OnCallPage';
+import ProblemDetailPage, {
+  problemDetailAction,
+  problemDetailLoader,
+} from './pages/ProblemDetailPage';
+import ProblemsPage, { problemsAction, problemsLoader } from './pages/ProblemsPage';
 import { TicketDetailPage, ticketDetailAction, ticketDetailLoader } from './pages/TicketDetailPage';
 import { TicketsPage, ticketsLoader } from './pages/TicketsPage';
 
@@ -70,6 +78,42 @@ const router = createBrowserRouter([
       },
       { path: 'kb', element: <KbPage />, loader: kbLoader },
       { path: 'kb/:id', element: <KbArticlePage />, loader: kbArticleLoader },
+
+      // Problem Management
+      {
+        path: 'problems',
+        element: <ProblemsPage />,
+        loader: problemsLoader,
+        action: problemsAction,
+      },
+      {
+        path: 'problems/:id',
+        element: <ProblemDetailPage />,
+        loader: problemDetailLoader,
+        action: problemDetailAction,
+      },
+
+      // Change Management
+      {
+        path: 'changes',
+        element: <ChangesPage />,
+        loader: changesLoader,
+        action: changesAction,
+      },
+      {
+        path: 'changes/:id',
+        element: <ChangeDetailPage />,
+        loader: changeDetailLoader,
+        action: changeDetailAction,
+      },
+
+      // Admin-only: on-call schedule
+      {
+        path: 'admin/schedule',
+        element: <OnCallPage />,
+        loader: onCallLoader,
+        action: onCallAction,
+      },
 
       // Admin-only: user management
       {

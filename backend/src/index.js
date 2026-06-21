@@ -10,8 +10,11 @@ const kbRoutes = require('./routes/kb');
 const dashboardRoutes = require('./routes/dashboard');
 const userRoutes = require('./routes/users');
 const notificationRoutes = require('./routes/notifications');
-const catalogRoutes = require('./routes/catalog');
-const emailRoutes = require('./routes/email');
+const catalogRoutes      = require('./routes/catalog');
+const emailRoutes        = require('./routes/email');
+const oncallRoutes       = require('./routes/oncall');
+const problemRoutes      = require('./routes/problems');
+const changeRoutes       = require('./routes/changes');
 
 const emailPoller = require('./services/emailPoller');
 const slaMonitor = require('./services/slaMonitor');
@@ -49,6 +52,9 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/catalog', catalogRoutes);
 app.use('/api/email', emailRoutes);
+app.use('/api/oncall', oncallRoutes);
+app.use('/api/problems', problemRoutes);
+app.use('/api/changes', changeRoutes);
 
 // ─── Global error handler ─────────────────────────────────────────────────────
 

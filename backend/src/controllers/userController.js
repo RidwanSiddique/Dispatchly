@@ -2,7 +2,7 @@ const bcrypt = require('bcryptjs');
 const pool = require('../db/pool');
 const { ROLES } = require('../config/constants');
 
-const SAFE_FIELDS = 'id, email, name, role, department, is_active, created_at, updated_at';
+const SAFE_FIELDS = 'id, email, name, role, department, is_active, availability_status, skills, created_at, updated_at';
 
 // ─── GET /api/users ───────────────────────────────────────────────────────────
 
@@ -153,4 +153,71 @@ const deactivateUser = async (req, res, next) => {
   }
 };
 
-module.exports = { getUsers, getUser, createUser, updateUser, deactivateUser };
+// ─── GET /api/staff — staff users for assignment dropdowns ────────────────────
+// Accessible to admin + manager (non-admin staff can also see this for routing purposes)
+
+const getStaff = async (_req, res, next) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT ${SAFE_FIELDS}
+       FROM users
+       WHERE role IN ('admin','manager','agent','technician','specialist')
+         AND is_active = TRUE
+       ORDER BY role ASC, name ASC`
+    );
+    res.json(rows);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ─── PATCH /api/users/me/availability ─────────────────────────────────────────
+
+const updateAvailability = async (req, res, next) => {
+  try {
+    const { availability_status } = req.body;
+    const VALID = ['available', 'on_call', 'offline', 'busy'];
+    if (!VALID.includes(availability_status)) {
+      return res.status(400).json({ error: `availability_status must be one of: ${VALID.join(', ')}` });
+    }
+    const {
+      rows: [user],
+    } = await pool.query(
+      `UPDATE users SET availability_status = $1, updated_at = NOW()
+       WHERE id = $2
+       RETURNING ${SAFE_FIELDS}`,
+      [availability_status, req.user.userId]
+    );
+    res.json(user);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ─── PATCH /api/users/:id/skills ─────────────────────────────────────────────
+
+const updateSkills = async (req, res, next) => {
+  try {
+    const { skills } = req.body;
+    if (!Array.isArray(skills)) {
+      return res.status(400).json({ error: 'skills must be an array' });
+    }
+    const {
+      rows: [user],
+    } = await pool.query(
+      `UPDATE users SET skills = $1, updated_at = NOW()
+       WHERE id = $2
+       RETURNING ${SAFE_FIELDS}`,
+      [skills, req.params.id]
+    );
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    res.json(user);
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = {
+  getUsers, getUser, createUser, updateUser, deactivateUser,
+  getStaff, updateAvailability, updateSkills,
+};
