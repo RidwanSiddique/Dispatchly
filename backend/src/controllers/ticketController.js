@@ -1,36 +1,12 @@
 const pool = require('../db/pool');
-const { SLA_MINUTES, ESCALATION_TEAMS } = require('../config/constants');
-
-// ─── SLA computation (pure JS, no DB) ────────────────────────────────────────
-
-function computeSla(ticket) {
-  if (['Resolved', 'Closed'].includes(ticket.status)) {
-    return { status: 'Resolved', minutesRemaining: null, percentElapsed: 100 };
-  }
-  const elapsed = (Date.now() - new Date(ticket.created_at)) / 60000;
-  const total = ticket.sla_minutes;
-  const remaining = total - elapsed;
-  const pct = Math.min(100, (elapsed / total) * 100);
-  return {
-    status: remaining < 0 ? 'Breached' : pct >= 75 ? 'At Risk' : 'On Track',
-    minutesRemaining: Math.round(remaining),
-    percentElapsed: Math.round(pct),
-  };
-}
-
-function enrich(ticket) {
-  return {
-    ...ticket,
-    sla: computeSla(ticket),
-    suggestedEscalationTeam: ESCALATION_TEAMS[ticket.category] ?? null,
-  };
-}
+const { SLA_MINUTES, ESCALATION_TEAMS, REQUESTER_ROLES } = require('../config/constants');
+const { enrich } = require('../utils/sla');
 
 // ─── Query helpers ────────────────────────────────────────────────────────────
 
 /**
  * Build a dynamic WHERE clause from optional filter values.
- * Returns { where: string, values: any[], nextParam: () => number }
+ * Supports role-based visibility filters (created_by_user_id, assigned_to_user_id).
  */
 function buildWhere(filters) {
   const conditions = [];
@@ -39,31 +15,38 @@ function buildWhere(filters) {
   const p = () => n++;
 
   if (filters.status) {
-    conditions.push(`status = $${p()}`);
+    conditions.push(`t.status = $${p()}`);
     values.push(filters.status);
   }
   if (filters.priority) {
-    conditions.push(`priority = $${p()}`);
+    conditions.push(`t.priority = $${p()}`);
     values.push(filters.priority);
   }
   if (filters.type) {
-    conditions.push(`type = $${p()}`);
+    conditions.push(`t.type = $${p()}`);
     values.push(filters.type);
   }
   if (filters.category) {
-    conditions.push(`category = $${p()}`);
+    conditions.push(`t.category = $${p()}`);
     values.push(filters.category);
+  }
+  if (filters.created_by_user_id != null) {
+    conditions.push(`t.created_by_user_id = $${p()}`);
+    values.push(filters.created_by_user_id);
+  }
+  if (filters.assigned_to_user_id != null) {
+    conditions.push(`t.assigned_to_user_id = $${p()}`);
+    values.push(filters.assigned_to_user_id);
   }
   if (filters.search) {
     const i = p();
-    conditions.push(`(title ILIKE $${i} OR requester_name ILIKE $${i} OR description ILIKE $${i})`);
+    conditions.push(`(t.title ILIKE $${i} OR t.requester_name ILIKE $${i} OR t.description ILIKE $${i})`);
     values.push(`%${filters.search}%`);
   }
 
   return {
     where: conditions.length ? `WHERE ${conditions.join(' AND ')}` : '',
     values,
-    // returns next available $N index
     nextN: () => n,
   };
 }
@@ -77,17 +60,35 @@ function buildWhere(filters) {
 const getTickets = async (req, res, next) => {
   try {
     const { status, priority, type, category, search, page = 1, limit = 25 } = req.query;
+    const { role, userId } = req.user;
     const offset = (parseInt(page, 10) - 1) * parseInt(limit, 10);
 
-    const { where, values, nextN } = buildWhere({ status, priority, type, category, search });
+    // Role-based visibility
+    const roleFilters = {};
+    if (REQUESTER_ROLES.includes(role)) {
+      roleFilters.created_by_user_id = userId;
+    } else if (role === 'technician') {
+      roleFilters.assigned_to_user_id = userId;
+    }
 
-    const countRes = await pool.query(`SELECT COUNT(*) FROM tickets ${where}`, values);
+    const { where, values, nextN } = buildWhere({ status, priority, type, category, search, ...roleFilters });
+
+    const countRes = await pool.query(
+      `SELECT COUNT(*) FROM tickets t ${where}`,
+      values
+    );
     const total = parseInt(countRes.rows[0].count, 10);
 
     const n = nextN();
     const ticketsRes = await pool.query(
-      `SELECT * FROM tickets ${where}
-       ORDER BY created_at DESC
+      `SELECT t.*,
+              au.name AS assigned_to_name,
+              cu.name AS created_by_name
+       FROM tickets t
+       LEFT JOIN users au ON t.assigned_to_user_id = au.id
+       LEFT JOIN users cu ON t.created_by_user_id  = cu.id
+       ${where}
+       ORDER BY t.created_at DESC
        LIMIT $${n} OFFSET $${n + 1}`,
       [...values, parseInt(limit, 10), offset]
     );
@@ -110,8 +111,26 @@ const getTicket = async (req, res, next) => {
   try {
     const {
       rows: [ticket],
-    } = await pool.query('SELECT * FROM tickets WHERE id = $1', [req.params.id]);
+    } = await pool.query(
+      `SELECT t.*,
+              au.name AS assigned_to_name,
+              cu.name AS created_by_name
+       FROM tickets t
+       LEFT JOIN users au ON t.assigned_to_user_id = au.id
+       LEFT JOIN users cu ON t.created_by_user_id  = cu.id
+       WHERE t.id = $1`,
+      [req.params.id]
+    );
     if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
+
+    // Role-based access check
+    const { role, userId } = req.user;
+    if (REQUESTER_ROLES.includes(role) && ticket.created_by_user_id !== userId) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+    if (role === 'technician' && ticket.assigned_to_user_id !== userId) {
+      return res.status(403).json({ error: 'Access denied — ticket not assigned to you' });
+    }
 
     const [commentsRes, escalationsRes] = await Promise.all([
       pool.query('SELECT * FROM ticket_comments WHERE ticket_id = $1 ORDER BY created_at ASC', [
@@ -146,27 +165,36 @@ const getTicket = async (req, res, next) => {
  */
 const createTicket = async (req, res, next) => {
   try {
+    const { role, userId, name: userName, email: userEmail, department: userDept } = req.user;
+    const isRequester = REQUESTER_ROLES.includes(role);
+
     const {
-      requester_name,
-      requester_email,
-      department,
+      requester_name = isRequester ? userName : undefined,
+      requester_email = isRequester ? userEmail : undefined,
+      department = isRequester ? userDept : undefined,
       location,
       type = 'Incident',
-      priority = 'P3',
       category,
       title,
       description,
     } = req.body;
 
+    // Requester roles cannot set priority — fixed to P3
+    const priority = isRequester ? 'P3' : (req.body.priority ?? 'P3');
     const sla_minutes = SLA_MINUTES[priority] ?? SLA_MINUTES.P3;
+
+    if (!requester_name) {
+      return res.status(400).json({ error: 'requester_name is required' });
+    }
 
     const {
       rows: [ticket],
     } = await pool.query(
       `INSERT INTO tickets
          (requester_name, requester_email, department, location,
-          type, priority, category, title, description, sla_minutes)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+          type, priority, category, title, description, sla_minutes,
+          created_by_user_id)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
        RETURNING *`,
       [
         requester_name,
@@ -179,6 +207,7 @@ const createTicket = async (req, res, next) => {
         title,
         description,
         sla_minutes,
+        userId,
       ]
     );
 
@@ -193,6 +222,7 @@ const createTicket = async (req, res, next) => {
  */
 const updateTicket = async (req, res, next) => {
   try {
+    const { role } = req.user;
     const ALLOWED = [
       'status',
       'priority',
@@ -204,6 +234,8 @@ const updateTicket = async (req, res, next) => {
       'closed_at',
       'kb_article_id',
     ];
+    // Only admin/manager can reassign tickets
+    if (['admin', 'manager'].includes(role)) ALLOWED.push('assigned_to_user_id');
 
     const sets = [];
     const values = [];
@@ -276,7 +308,7 @@ const escalateTicket = async (req, res, next) => {
       pool.query(
         `INSERT INTO escalations (ticket_id, reason, escalated_to_team, escalated_by)
          VALUES ($1,$2,$3,$4) RETURNING *`,
-        [ticket.id, reason, team, escalated_by || 'Tier 1 Agent']
+        [ticket.id, reason, team, escalated_by || req.user.name || 'Tier 1 Agent']
       ),
       pool.query(
         `UPDATE tickets SET status = 'Escalated', updated_at = NOW()
@@ -296,13 +328,23 @@ const escalateTicket = async (req, res, next) => {
  */
 const addComment = async (req, res, next) => {
   try {
-    const { body, author, is_internal = false } = req.body;
+    const { body, is_internal = false } = req.body;
     if (!body) return res.status(400).json({ error: 'Comment body is required' });
+
+    const { role, userId, name: userName } = req.user;
+
+    // Requester roles cannot post internal notes
+    const internal = REQUESTER_ROLES.includes(role) ? false : Boolean(is_internal);
 
     const {
       rows: [ticket],
     } = await pool.query('SELECT * FROM tickets WHERE id = $1', [req.params.id]);
     if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
+
+    // Requesters can only comment on their own tickets
+    if (REQUESTER_ROLES.includes(role) && ticket.created_by_user_id !== userId) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
 
     const [
       {
@@ -312,10 +354,10 @@ const addComment = async (req, res, next) => {
       pool.query(
         `INSERT INTO ticket_comments (ticket_id, author, body, is_internal)
          VALUES ($1,$2,$3,$4) RETURNING *`,
-        [ticket.id, author || 'Agent', body, is_internal]
+        [ticket.id, req.body.author || userName || 'Agent', body, internal]
       ),
-      // Auto-advance New → In Progress on first comment
-      ticket.status === 'New'
+      // Auto-advance New → In Progress on first staff comment
+      ticket.status === 'New' && !REQUESTER_ROLES.includes(role)
         ? pool.query(
             `UPDATE tickets SET status = 'In Progress', updated_at = NOW() WHERE id = $1`,
             [ticket.id]
@@ -358,7 +400,7 @@ const convertToKb = async (req, res, next) => {
         symptoms || ticket.description,
         resolution_steps || ticket.resolution_notes || '',
         ticket.category,
-        author || 'Agent',
+        author || req.user.name || 'Agent',
         ticket.id,
       ]
     );

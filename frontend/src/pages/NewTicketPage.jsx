@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Form, Link, redirect, useActionData, useNavigation } from 'react-router-dom';
+import { REQUESTER_ROLES, useCurrentUser } from '../context/AuthContext';
 
 const CATEGORIES = ['Network', 'Clinical Application', 'Hardware', 'Software', 'Account Access'];
 const ESCALATION_TEAMS = {
@@ -36,6 +37,7 @@ export async function newTicketAction({ request }) {
 
   const res = await fetch('/api/tickets', {
     method: 'POST',
+    credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
@@ -63,6 +65,8 @@ export function NewTicketPage() {
   const actionData = useActionData();
   const navigation = useNavigation();
   const submitting = navigation.state === 'submitting';
+  const user = useCurrentUser();
+  const isRequester = REQUESTER_ROLES.includes(user?.role);
 
   // Priority selection is UI-only state; the hidden input carries the value
   const [priority, setPriority] = useState('P3');
@@ -72,18 +76,24 @@ export function NewTicketPage() {
     <div>
       <div className="flex items-center justify-between px-8 py-6 border-b border-gray-200 bg-white sticky top-0 z-10">
         <div>
-          <h1 className="text-xl font-semibold text-gray-900">New Ticket</h1>
-          <p className="mt-0.5 text-sm text-gray-500">Submit a new incident or service request</p>
+          <h1 className="text-xl font-semibold text-gray-900">
+            {isRequester ? 'Submit a Ticket' : 'New Ticket'}
+          </h1>
+          <p className="mt-0.5 text-sm text-gray-500">
+            {isRequester
+              ? 'Report an issue or submit a service request'
+              : 'Submit a new incident or service request'}
+          </p>
         </div>
-        <Link to="/tickets" className="btn-secondary">
+        <Link to="/tickets" className="btn btn-secondary">
           Cancel
         </Link>
       </div>
 
       <div className="p-8 max-w-2xl">
         <Form method="post" className="card p-6 space-y-5">
-          {/* Hidden input carries the priority value set by the card buttons */}
-          <input type="hidden" name="priority" value={priority} />
+          {/* Hidden input carries the priority value */}
+          <input type="hidden" name="priority" value={isRequester ? 'P3' : priority} />
 
           {/* ── Requester ── */}
           <div>
@@ -92,7 +102,14 @@ export function NewTicketPage() {
             </h2>
             <div className="grid grid-cols-2 gap-4">
               <Field label="Full Name" required>
-                <input className="input" name="requester_name" required placeholder="Jane Smith" />
+                <input
+                  className="input"
+                  name="requester_name"
+                  required
+                  placeholder="Jane Smith"
+                  defaultValue={isRequester ? user.name : ''}
+                  readOnly={isRequester}
+                />
               </Field>
               <Field label="Email">
                 <input
@@ -100,10 +117,18 @@ export function NewTicketPage() {
                   name="requester_email"
                   type="email"
                   placeholder="jane@hospital.org"
+                  defaultValue={isRequester ? user.email : ''}
+                  readOnly={isRequester}
                 />
               </Field>
               <Field label="Department">
-                <input className="input" name="department" placeholder="Radiology, ICU, HR…" />
+                <input
+                  className="input"
+                  name="department"
+                  placeholder="Radiology, ICU, HR…"
+                  defaultValue={isRequester ? (user.department ?? '') : ''}
+                  readOnly={isRequester && !!user?.department}
+                />
               </Field>
               <Field label="Location / Site">
                 <input className="input" name="location" placeholder="Main Campus, North Wing…" />
@@ -138,30 +163,32 @@ export function NewTicketPage() {
               </Field>
             </div>
 
-            {/* Priority cards */}
-            <div className="mt-4">
-              <label className="label">
-                Priority <span className="text-red-500">*</span>
-              </label>
-              <div className="grid grid-cols-4 gap-2 mt-1">
-                {['P1', 'P2', 'P3', 'P4'].map((p) => (
-                  <button
-                    key={p}
-                    type="button"
-                    onClick={() => setPriority(p)}
-                    className={`rounded-lg border-2 p-3 text-left transition-all ${
-                      priority === p
-                        ? PRIORITY_SELECTED_STYLE[p]
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    <span className="block font-bold text-sm">{p}</span>
-                    <span className="block text-xs text-gray-500 mt-0.5">{SLA_LABELS[p]}</span>
-                  </button>
-                ))}
+            {/* Priority cards — hidden for requesters (always P3) */}
+            {!isRequester && (
+              <div className="mt-4">
+                <label className="label">
+                  Priority <span className="text-red-500">*</span>
+                </label>
+                <div className="grid grid-cols-4 gap-2 mt-1">
+                  {['P1', 'P2', 'P3', 'P4'].map((p) => (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => setPriority(p)}
+                      className={`rounded-lg border-2 p-3 text-left transition-all ${
+                        priority === p
+                          ? PRIORITY_SELECTED_STYLE[p]
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <span className="block font-bold text-sm">{p}</span>
+                      <span className="block text-xs text-gray-500 mt-0.5">{SLA_LABELS[p]}</span>
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-2 text-xs text-gray-400">{PRIORITY_DESC[priority]}</p>
               </div>
-              <p className="mt-2 text-xs text-gray-400">{PRIORITY_DESC[priority]}</p>
-            </div>
+            )}
 
             {/* Escalation routing hint */}
             {category && ESCALATION_TEAMS[category] && (
@@ -180,7 +207,7 @@ export function NewTicketPage() {
                   />
                 </svg>
                 <p className="text-xs text-blue-700">
-                  Tier 2 escalation would route to: <strong>{ESCALATION_TEAMS[category]}</strong>
+                  Tier 2 escalation routes to: <strong>{ESCALATION_TEAMS[category]}</strong>
                 </p>
               </div>
             )}
@@ -222,11 +249,11 @@ export function NewTicketPage() {
           )}
 
           <div className="flex justify-end gap-3 pt-2">
-            <Link to="/tickets" className="btn-secondary">
+            <Link to="/tickets" className="btn btn-secondary">
               Cancel
             </Link>
-            <button type="submit" disabled={submitting} className="btn-primary">
-              {submitting ? 'Creating…' : 'Create Ticket'}
+            <button type="submit" disabled={submitting} className="btn btn-primary">
+              {submitting ? 'Creating…' : isRequester ? 'Submit Ticket' : 'Create Ticket'}
             </button>
           </div>
         </Form>

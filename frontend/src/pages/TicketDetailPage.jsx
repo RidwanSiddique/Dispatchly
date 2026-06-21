@@ -4,11 +4,18 @@ import { Link, useFetcher, useLoaderData } from 'react-router-dom';
 import { PageHeader } from '../components/layout/Layout';
 import { PriorityBadge, SlaBadge, StatusBadge, TypeBadge } from '../components/ui/Badge';
 import { SlaBar } from '../components/ui/SlaBar';
+import {
+  CAN_CONVERT_KB,
+  CAN_ESCALATE,
+  CAN_RESOLVE,
+  REQUESTER_ROLES,
+  useCurrentUser,
+} from '../context/AuthContext';
 
 // ─── Loader ──────────────────────────────────────────────────────────────────
 
 export async function ticketDetailLoader({ params }) {
-  const res = await fetch(`/api/tickets/${params.id}`);
+  const res = await fetch(`/api/tickets/${params.id}`, { credentials: 'include' });
   if (!res.ok) throw new Response('Ticket not found', { status: res.status });
   return res.json();
 }
@@ -24,6 +31,7 @@ export async function ticketDetailAction({ request, params }) {
   const json = (data) =>
     fetch(`/api/tickets/${params.id}`, {
       method: 'PATCH',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
@@ -32,6 +40,7 @@ export async function ticketDetailAction({ request, params }) {
     case 'escalate': {
       const res = await fetch(`/api/tickets/${params.id}/escalate`, {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           reason: formData.get('reason'),
@@ -50,6 +59,7 @@ export async function ticketDetailAction({ request, params }) {
       if (formData.get('convert_to_kb') === 'true') {
         await fetch(`/api/tickets/${params.id}/convert-to-kb`, {
           method: 'POST',
+          credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             title: formData.get('kb_title'),
@@ -68,6 +78,7 @@ export async function ticketDetailAction({ request, params }) {
     case 'comment': {
       const res = await fetch(`/api/tickets/${params.id}/comments`, {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ body: formData.get('body') }),
       });
@@ -217,6 +228,8 @@ export function TicketDetailPage() {
   const closeFetcher = useFetcher();
   const commentFetcher = useFetcher();
   const commentRef = useRef(null);
+  const user = useCurrentUser();
+  const role = user?.role ?? 'client';
 
   const [showEscalate, setShowEscalate] = useState(false);
   const [showResolve, setShowResolve] = useState(false);
@@ -229,8 +242,21 @@ export function TicketDetailPage() {
   }, [commentFetcher.data]);
 
   const isResolved = ['Resolved', 'Closed'].includes(ticket.status);
-  const canEscalate = !['Escalated', 'Resolved', 'Closed'].includes(ticket.status);
-  const canResolve = !['Resolved', 'Closed'].includes(ticket.status);
+
+  // Role-based action permissions
+  const userCanEscalate =
+    (role === 'admin' || CAN_ESCALATE.includes(role)) &&
+    !['Escalated', 'Resolved', 'Closed'].includes(ticket.status);
+  const userCanResolve =
+    (role === 'admin' || CAN_RESOLVE.includes(role)) &&
+    !['Resolved', 'Closed'].includes(ticket.status);
+  const userCanClose =
+    (role === 'admin' || CAN_RESOLVE.includes(role)) && ticket.status === 'Resolved';
+  const isRequester = REQUESTER_ROLES.includes(role);
+
+  // Legacy aliases used in JSX below
+  const canEscalate = userCanEscalate;
+  const canResolve = userCanResolve;
 
   return (
     <div>
@@ -265,12 +291,12 @@ export function TicketDetailPage() {
                 Resolve
               </button>
             )}
-            {ticket.status === 'Resolved' && (
+            {userCanClose && (
               <closeFetcher.Form method="post">
                 <input type="hidden" name="_intent" value="close" />
                 <button
                   type="submit"
-                  className="btn-secondary"
+                  className="btn btn-secondary"
                   disabled={closeFetcher.state !== 'idle'}
                 >
                   Close Ticket

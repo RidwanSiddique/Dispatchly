@@ -1,17 +1,28 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const cookieParser = require('cookie-parser');
 const pool = require('./db/pool');
 
+const authRoutes = require('./routes/auth');
 const ticketRoutes = require('./routes/tickets');
 const kbRoutes = require('./routes/kb');
 const dashboardRoutes = require('./routes/dashboard');
+const userRoutes = require('./routes/users');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-app.use(cors());
+// ─── Middleware ───────────────────────────────────────────────────────────────
+
+app.use(cors({
+  origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+  credentials: true,
+}));
 app.use(express.json());
+app.use(cookieParser());
+
+// ─── Routes ───────────────────────────────────────────────────────────────────
 
 app.get('/health', async (_req, res) => {
   try {
@@ -22,15 +33,20 @@ app.get('/health', async (_req, res) => {
   }
 });
 
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
 app.use('/api/tickets', ticketRoutes);
 app.use('/api/kb', kbRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 
-// Global error handler
+// ─── Global error handler ─────────────────────────────────────────────────────
+
 app.use((err, _req, res, _next) => {
   console.error(err.stack);
-  res.status(500).json({ error: err.message || 'Internal server error' });
+  res.status(err.status || 500).json({ error: err.message || 'Internal server error' });
 });
+
+// ─── Start ────────────────────────────────────────────────────────────────────
 
 app.listen(PORT, async () => {
   try {

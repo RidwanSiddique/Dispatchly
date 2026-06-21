@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { validate } = require('../middleware/validate');
+const { requireAuth, requireRole } = require('../middleware/auth');
 const {
   getTickets,
   getTicket,
@@ -10,13 +11,28 @@ const {
   addComment,
   convertToKb,
 } = require('../controllers/ticketController');
+const { CAN_ESCALATE, CAN_RESOLVE, CAN_CONVERT_KB } = require('../config/constants');
+
+// All ticket routes require authentication
+router.use(requireAuth);
 
 router.get('/', getTickets);
-router.post('/', validate(['requester_name', 'title', 'description']), createTicket);
+
+// All authenticated roles can create tickets
+router.post('/', validate(['title', 'description']), createTicket);
+
 router.get('/:id', getTicket);
-router.patch('/:id', updateTicket);
-router.post('/:id/escalate', escalateTicket);
+
+// Only staff can mutate ticket status/fields
+router.patch('/:id', requireRole('admin', 'manager', 'agent', 'technician', 'specialist'), updateTicket);
+
+// Escalate: agent-level and above only
+router.post('/:id/escalate', requireRole(...CAN_ESCALATE), escalateTicket);
+
+// Anyone authenticated can comment
 router.post('/:id/comments', addComment);
-router.post('/:id/convert-to-kb', convertToKb);
+
+// Convert resolved ticket to KB: agent-level specialists
+router.post('/:id/convert-to-kb', requireRole(...CAN_CONVERT_KB), convertToKb);
 
 module.exports = router;

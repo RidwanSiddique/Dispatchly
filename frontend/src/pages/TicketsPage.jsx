@@ -4,6 +4,7 @@ import { PageHeader } from '../components/layout/Layout';
 import { PriorityBadge, SlaBadge, StatusBadge, TypeBadge } from '../components/ui/Badge';
 import { EmptyState } from '../components/ui/EmptyState';
 import { SlaBar } from '../components/ui/SlaBar';
+import { REQUESTER_ROLES, useCurrentUser } from '../context/AuthContext';
 
 const STATUSES = ['New', 'In Progress', 'Escalated', 'Resolved', 'Closed'];
 const PRIORITIES = ['P1', 'P2', 'P3', 'P4'];
@@ -14,7 +15,7 @@ const CATEGORIES = ['Network', 'Clinical Application', 'Hardware', 'Software', '
 
 export async function ticketsLoader({ request }) {
   const url = new URL(request.url);
-  const res = await fetch(`/api/tickets?${url.searchParams}`);
+  const res = await fetch(`/api/tickets?${url.searchParams}`, { credentials: 'include' });
   if (!res.ok) throw new Response('Failed to load tickets', { status: res.status });
   return res.json();
 }
@@ -24,6 +25,8 @@ export async function ticketsLoader({ request }) {
 export function TicketsPage() {
   const data = useLoaderData();
   const [searchParams, setSearchParams] = useSearchParams();
+  const user = useCurrentUser();
+  const isRequester = REQUESTER_ROLES.includes(user?.role);
 
   const getParam = (key) => searchParams.get(key) ?? '';
 
@@ -55,7 +58,7 @@ export function TicketsPage() {
         title="Tickets"
         subtitle={data ? `${data.total} ticket${data.total !== 1 ? 's' : ''}` : ''}
         actions={
-          <Link to="/tickets/new" className="btn-primary">
+          <Link to="/tickets/new" className="btn btn-primary">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
@@ -64,7 +67,7 @@ export function TicketsPage() {
                 d="M12 4v16m8-8H4"
               />
             </svg>
-            New Ticket
+            {isRequester ? 'Submit Ticket' : 'New Ticket'}
           </Link>
         }
       />

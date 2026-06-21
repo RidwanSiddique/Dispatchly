@@ -9,7 +9,7 @@ const CATEGORIES = ['Network', 'Clinical Application', 'Hardware', 'Software', '
 
 export async function kbLoader({ request }) {
   const url = new URL(request.url);
-  const res = await fetch(`/api/kb?${url.searchParams}`);
+  const res = await fetch(`/api/kb?${url.searchParams}`, { credentials: 'include' });
   if (!res.ok) throw new Response('Failed to load KB', { status: res.status });
   return res.json();
 }

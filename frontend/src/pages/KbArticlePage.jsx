@@ -5,7 +5,7 @@ import { PageHeader } from '../components/layout/Layout';
 // ─── Loader ──────────────────────────────────────────────────────────────────
 
 export async function kbArticleLoader({ params }) {
-  const res = await fetch(`/api/kb/${params.id}`);
+  const res = await fetch(`/api/kb/${params.id}`, { credentials: 'include' });
   if (!res.ok) throw new Response('Article not found', { status: res.status });
   return res.json();
 }

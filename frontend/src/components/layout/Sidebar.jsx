@@ -1,6 +1,8 @@
 import { NavLink } from 'react-router-dom';
+import { CAN_MANAGE_KB, STAFF_ROLES, useCurrentUser } from '../../context/AuthContext';
 
-const NAV_ITEMS = [
+// Base nav for everyone
+const CORE_NAV = [
   {
     to: '/',
     label: 'Dashboard',
@@ -54,9 +56,47 @@ const NAV_ITEMS = [
   },
 ];
 
-export function Sidebar() {
+const ADMIN_NAV = [
+  {
+    to: '/admin/users',
+    label: 'Users',
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={1.8}
+          d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
+        />
+      </svg>
+    ),
+  },
+];
+
+function NavItem({ to, label, icon }) {
   return (
-    <aside className="w-64 min-h-screen bg-gray-900 flex flex-col">
+    <NavLink
+      to={to}
+      end={to === '/'}
+      className={({ isActive }) =>
+        `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors duration-150 ${
+          isActive ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'
+        }`
+      }
+    >
+      {icon}
+      {label}
+    </NavLink>
+  );
+}
+
+export function Sidebar() {
+  const user = useCurrentUser();
+  const role = user?.role;
+  const isAdmin = role === 'admin';
+
+  return (
+    <aside className="flex flex-col flex-1 bg-gray-900 overflow-y-auto">
       {/* Logo */}
       <div className="px-6 py-5 border-b border-gray-800">
         <div className="flex items-center gap-3">
@@ -84,37 +124,22 @@ export function Sidebar() {
 
       {/* Nav */}
       <nav className="flex-1 px-3 py-4 space-y-1">
-        {NAV_ITEMS.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            end={item.to === '/'}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors duration-150 ${
-                isActive
-                  ? 'bg-blue-600 text-white'
-                  : 'text-gray-400 hover:text-white hover:bg-gray-800'
-              }`
-            }
-          >
-            {item.icon}
-            {item.label}
-          </NavLink>
+        {CORE_NAV.map((item) => (
+          <NavItem key={item.to} {...item} />
         ))}
-      </nav>
 
-      {/* Footer */}
-      <div className="px-4 py-4 border-t border-gray-800">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-gray-700 rounded-full flex items-center justify-center">
-            <span className="text-gray-300 text-xs font-semibold">T1</span>
-          </div>
-          <div className="min-w-0">
-            <p className="text-gray-300 text-sm font-medium truncate">Tier 1 Agent</p>
-            <p className="text-gray-500 text-xs">Service Desk</p>
-          </div>
-        </div>
-      </div>
+        {/* Admin-only section */}
+        {isAdmin && (
+          <>
+            <div className="pt-4 pb-1 px-3">
+              <p className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Admin</p>
+            </div>
+            {ADMIN_NAV.map((item) => (
+              <NavItem key={item.to} {...item} />
+            ))}
+          </>
+        )}
+      </nav>
     </aside>
   );
 }

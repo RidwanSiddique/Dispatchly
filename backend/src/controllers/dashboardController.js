@@ -1,7 +1,28 @@
 const pool = require('../db/pool');
+const { computeSla } = require('../utils/sla');
+const { REQUESTER_ROLES } = require('../config/constants');
 
-const getDashboard = async (_req, res, next) => {
+// Build optional WHERE clause for role-based ticket visibility
+function visibilityClause(role, userId) {
+  if (REQUESTER_ROLES.includes(role)) {
+    return { clause: 'AND created_by_user_id = $1', values: [userId] };
+  }
+  if (role === 'technician') {
+    return { clause: 'AND assigned_to_user_id = $1', values: [userId] };
+  }
+  return { clause: '', values: [] };
+}
+
+const getDashboard = async (req, res, next) => {
   try {
+    const { role, userId } = req.user;
+    const { clause, values } = visibilityClause(role, userId);
+    const hasFilter = values.length > 0;
+
+    // Dynamic query fragment helper
+    const scoped = (baseWhere) =>
+      hasFilter ? `${baseWhere} ${clause}` : baseWhere;
+
     const [
       totalsRes,
       byPriorityRes,
@@ -12,78 +33,80 @@ const getDashboard = async (_req, res, next) => {
       openForSlaRes,
       resolvedRes,
     ] = await Promise.all([
-      // Totals
-      pool.query(`
-        SELECT
+      pool.query(
+        `SELECT
           COUNT(*)                                                  AS total,
           COUNT(*) FILTER (WHERE status NOT IN ('Resolved','Closed')) AS open,
           COUNT(*) FILTER (WHERE status IN ('Resolved','Closed'))     AS resolved
-        FROM tickets
-      `),
-      // Open tickets by priority
-      pool.query(`
-        SELECT priority, COUNT(*) AS count
-        FROM tickets
-        WHERE status NOT IN ('Resolved','Closed')
-        GROUP BY priority
-      `),
-      // All tickets by status
-      pool.query(`
-        SELECT status, COUNT(*) AS count
-        FROM tickets
-        GROUP BY status
-      `),
-      // Open tickets by category
-      pool.query(`
-        SELECT category, COUNT(*) AS count
-        FROM tickets
-        WHERE status NOT IN ('Resolved','Closed')
-          AND category IS NOT NULL
-        GROUP BY category
-        ORDER BY count DESC
-      `),
-      // Tickets by type
-      pool.query(`
-        SELECT type, COUNT(*) AS count
-        FROM tickets
-        GROUP BY type
-      `),
-      // 7 most recent tickets
-      pool.query(`
-        SELECT id, title, priority, status, type, category, created_at, sla_minutes
-        FROM tickets
-        ORDER BY created_at DESC
-        LIMIT 7
-      `),
-      // All open tickets — for JS-side SLA computation
-      pool.query(`
-        SELECT created_at, sla_minutes
-        FROM tickets
-        WHERE status NOT IN ('Resolved','Closed')
-      `),
-      // Resolved in last 30 days — for avg resolution time
-      pool.query(`
-        SELECT created_at, resolved_at
-        FROM tickets
-        WHERE status IN ('Resolved','Closed')
-          AND resolved_at IS NOT NULL
-          AND resolved_at >= NOW() - INTERVAL '30 days'
-      `),
+         FROM tickets
+         WHERE TRUE ${clause}`,
+        values
+      ),
+      pool.query(
+        `SELECT priority, COUNT(*) AS count
+         FROM tickets
+         WHERE status NOT IN ('Resolved','Closed') ${clause}
+         GROUP BY priority`,
+        values
+      ),
+      pool.query(
+        `SELECT status, COUNT(*) AS count
+         FROM tickets
+         WHERE TRUE ${clause}
+         GROUP BY status`,
+        values
+      ),
+      pool.query(
+        `SELECT category, COUNT(*) AS count
+         FROM tickets
+         WHERE status NOT IN ('Resolved','Closed')
+           AND category IS NOT NULL ${clause}
+         GROUP BY category
+         ORDER BY count DESC`,
+        values
+      ),
+      pool.query(
+        `SELECT type, COUNT(*) AS count
+         FROM tickets
+         WHERE TRUE ${clause}
+         GROUP BY type`,
+        values
+      ),
+      pool.query(
+        `SELECT id, title, priority, status, type, category, created_at, sla_minutes
+         FROM tickets
+         WHERE TRUE ${clause}
+         ORDER BY created_at DESC
+         LIMIT 7`,
+        values
+      ),
+      pool.query(
+        `SELECT created_at, sla_minutes
+         FROM tickets
+         WHERE status NOT IN ('Resolved','Closed') ${clause}`,
+        values
+      ),
+      pool.query(
+        `SELECT created_at, resolved_at
+         FROM tickets
+         WHERE status IN ('Resolved','Closed')
+           AND resolved_at IS NOT NULL
+           AND resolved_at >= NOW() - INTERVAL '30 days' ${clause}`,
+        values
+      ),
     ]);
 
-    // SLA health (computed in JS — avoids coupling SQL to clock drift)
-    const now = Date.now();
+    // SLA health computed in JS
     let breached = 0;
     let atRisk = 0;
     for (const t of openForSlaRes.rows) {
-      const elapsed = (now - new Date(t.created_at)) / 60000;
-      const pct = (elapsed / t.sla_minutes) * 100;
-      if (pct >= 100) breached++;
-      else if (pct >= 75) atRisk++;
+      const { status } = computeSla(t);
+      if (status === 'Breached') breached++;
+      else if (status === 'At Risk') atRisk++;
     }
     const openCount = openForSlaRes.rows.length;
 
-    // Average resolution time (minutes)
+    // Average resolution time (minutes) — last 30 days
     let avgResolutionMinutes = null;
     if (resolvedRes.rows.length > 0) {
       const totalMins = resolvedRes.rows.reduce(
@@ -124,6 +147,7 @@ const getDashboard = async (_req, res, next) => {
         count: parseInt(r.count, 10),
       })),
       recentTickets: recentRes.rows,
+      viewAs: role,
     });
   } catch (err) {
     next(err);
