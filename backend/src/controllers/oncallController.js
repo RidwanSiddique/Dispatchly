@@ -29,7 +29,7 @@ async function getOncall(_req, res, next) {
       ),
       // Currently on-call (schedule covers right now)
       pool.query(
-        `SELECT u.${STAFF_FIELDS.replace(/([a-z_]+)/g, 'u.$1')},
+        `SELECT ${STAFF_FIELDS.replace(/([a-z_]+)/g, 'u.$1')},
                 s.label, s.start_time, s.end_time
          FROM oncall_schedules s
          JOIN users u ON u.id = s.user_id
