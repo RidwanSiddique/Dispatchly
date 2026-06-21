@@ -4,13 +4,7 @@ import { Link, useFetcher, useLoaderData } from 'react-router-dom';
 import { PageHeader } from '../components/layout/Layout';
 import { PriorityBadge, SlaBadge, StatusBadge, TypeBadge } from '../components/ui/Badge';
 import { SlaBar } from '../components/ui/SlaBar';
-import {
-  CAN_CONVERT_KB,
-  CAN_ESCALATE,
-  CAN_RESOLVE,
-  REQUESTER_ROLES,
-  useCurrentUser,
-} from '../context/AuthContext';
+import { CAN_ESCALATE, CAN_RESOLVE, useCurrentUser } from '../context/AuthContext';
 
 // ─── Loader ──────────────────────────────────────────────────────────────────
 
@@ -83,6 +77,28 @@ export async function ticketDetailAction({ request, params }) {
         body: JSON.stringify({ body: formData.get('body') }),
       });
       return res.ok ? { ok: true, intent } : { error: 'Failed to post comment', intent };
+    }
+
+    case 'approve': {
+      const res = await fetch(`/api/tickets/${params.id}/approve`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ comment: formData.get('comment') }),
+      });
+      const result = await res.json();
+      return res.ok ? { ok: true, intent } : { error: result.error, intent };
+    }
+
+    case 'reject': {
+      const res = await fetch(`/api/tickets/${params.id}/reject`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ comment: formData.get('comment') }),
+      });
+      const result = await res.json();
+      return res.ok ? { ok: true, intent } : { error: result.error, intent };
     }
 
     default:
@@ -221,6 +237,106 @@ function ResolveModal({ ticket, onClose }) {
   );
 }
 
+// ─── Approval banner ─────────────────────────────────────────────────────────
+
+function ApprovalBanner({ ticket, canApprove }) {
+  const fetcher = useFetcher();
+  const [showComment, setShowComment] = useState(false);
+  const [intent, setIntent] = useState(null);
+  const busy = fetcher.state !== 'idle';
+
+  if (ticket.status !== 'Pending Approval') return null;
+
+  return (
+    <div className="rounded-xl border border-amber-200 bg-amber-50 p-5">
+      <div className="flex items-start gap-3">
+        <span className="mt-0.5 text-xl">📋</span>
+        <div className="flex-1">
+          <p className="font-semibold text-amber-900">Awaiting Approval</p>
+          {canApprove ? (
+            <p className="mt-0.5 text-sm text-amber-700">
+              This request needs your approval before work can begin.
+            </p>
+          ) : (
+            <p className="mt-0.5 text-sm text-amber-700">
+              Your request is waiting for manager approval. You'll be notified once a decision is
+              made.
+            </p>
+          )}
+
+          {canApprove && (
+            <div className="mt-4 space-y-3">
+              {showComment && (
+                <fetcher.Form method="post" className="space-y-3">
+                  <input type="hidden" name="_intent" value={intent} />
+                  <textarea
+                    name="comment"
+                    rows={2}
+                    placeholder={
+                      intent === 'approve'
+                        ? 'Optional approval note…'
+                        : 'Reason for rejection (recommended)'
+                    }
+                    className="w-full resize-none rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      type="submit"
+                      disabled={busy}
+                      className={`btn flex-1 ${intent === 'approve' ? 'btn-primary' : 'btn-danger'}`}
+                    >
+                      {busy
+                        ? 'Saving…'
+                        : intent === 'approve'
+                          ? '✓ Confirm Approval'
+                          : '✗ Confirm Rejection'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowComment(false);
+                        setIntent(null);
+                      }}
+                      className="btn btn-ghost"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </fetcher.Form>
+              )}
+
+              {!showComment && (
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIntent('approve');
+                      setShowComment(true);
+                    }}
+                    className="btn btn-primary"
+                  >
+                    ✓ Approve
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIntent('reject');
+                      setShowComment(true);
+                    }}
+                    className="btn btn-danger"
+                  >
+                    ✗ Reject
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export function TicketDetailPage() {
@@ -252,8 +368,6 @@ export function TicketDetailPage() {
     !['Resolved', 'Closed'].includes(ticket.status);
   const userCanClose =
     (role === 'admin' || CAN_RESOLVE.includes(role)) && ticket.status === 'Resolved';
-  const isRequester = REQUESTER_ROLES.includes(role);
-
   // Legacy aliases used in JSX below
   const canEscalate = userCanEscalate;
   const canResolve = userCanResolve;
@@ -313,6 +427,9 @@ export function TicketDetailPage() {
       <div className="p-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* ── Left: body + escalations + comments ── */}
         <div className="lg:col-span-2 space-y-6">
+          {/* Approval banner — shown when status is Pending Approval */}
+          <ApprovalBanner ticket={ticket} canApprove={role === 'admin' || role === 'manager'} />
+
           {/* Body card */}
           <div className="card p-5">
             <div className="flex items-start gap-3 flex-wrap mb-4">

@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom';
-import { CAN_MANAGE_KB, STAFF_ROLES, useCurrentUser } from '../../context/AuthContext';
+import { REQUESTER_ROLES, useCurrentUser } from '../../context/AuthContext';
 
-// Base nav for everyone
+// Nav items visible to all authenticated users
 const CORE_NAV = [
   {
     to: '/',
@@ -19,7 +19,8 @@ const CORE_NAV = [
   },
   {
     to: '/tickets',
-    label: 'Tickets',
+    label: 'My Tickets',
+    staffLabel: 'All Tickets',
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path
@@ -32,11 +33,16 @@ const CORE_NAV = [
     ),
   },
   {
-    to: '/tickets/new',
-    label: 'New Ticket',
+    to: '/catalog',
+    label: 'Service Catalog',
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 4v16m8-8H4" />
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={1.8}
+          d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
+        />
       </svg>
     ),
   },
@@ -55,6 +61,17 @@ const CORE_NAV = [
     ),
   },
 ];
+
+// Staff-only quick-create shortcut
+const STAFF_NEW_TICKET = {
+  to: '/tickets/new',
+  label: 'New Ticket',
+  icon: (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 4v16m8-8H4" />
+    </svg>
+  ),
+};
 
 const ADMIN_NAV = [
   {
@@ -94,6 +111,7 @@ export function Sidebar() {
   const user = useCurrentUser();
   const role = user?.role;
   const isAdmin = role === 'admin';
+  const isStaff = !REQUESTER_ROLES.includes(role);
 
   return (
     <aside className="flex flex-col flex-1 bg-gray-900 overflow-y-auto">
@@ -125,8 +143,16 @@ export function Sidebar() {
       {/* Nav */}
       <nav className="flex-1 px-3 py-4 space-y-1">
         {CORE_NAV.map((item) => (
-          <NavItem key={item.to} {...item} />
+          <NavItem
+            key={item.to}
+            to={item.to}
+            label={item.staffLabel && isStaff ? item.staffLabel : item.label}
+            icon={item.icon}
+          />
         ))}
+
+        {/* Staff-only: quick new ticket */}
+        {isStaff && <NavItem {...STAFF_NEW_TICKET} />}
 
         {/* Admin-only section */}
         {isAdmin && (

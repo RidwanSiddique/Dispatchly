@@ -19,7 +19,12 @@ router.get('/', getArticles);
 router.get('/:id', getArticle);
 
 // Only KB managers can create / edit / delete articles directly
-router.post('/', requireRole(...CAN_MANAGE_KB), validate(['title', 'symptoms', 'resolution_steps']), createArticle);
+router.post(
+  '/',
+  requireRole(...CAN_MANAGE_KB),
+  validate(['title', 'symptoms', 'resolution_steps']),
+  createArticle
+);
 router.patch('/:id', requireRole(...CAN_MANAGE_KB), updateArticle);
 router.delete('/:id', requireRole(...CAN_MANAGE_KB), deleteArticle);
 

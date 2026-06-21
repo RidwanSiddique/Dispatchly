@@ -11,6 +11,7 @@ const STATUS_STYLES = {
   Escalated: 'bg-purple-100 text-purple-700',
   Resolved: 'bg-green-100 text-green-700',
   Closed: 'bg-gray-100 text-gray-600',
+  'Pending Approval': 'bg-amber-100 text-amber-700',
 };
 
 const SLA_STYLES = {

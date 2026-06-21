@@ -9,16 +9,24 @@ const ticketRoutes = require('./routes/tickets');
 const kbRoutes = require('./routes/kb');
 const dashboardRoutes = require('./routes/dashboard');
 const userRoutes = require('./routes/users');
+const notificationRoutes = require('./routes/notifications');
+const catalogRoutes = require('./routes/catalog');
+const emailRoutes = require('./routes/email');
+
+const emailPoller = require('./services/emailPoller');
+const slaMonitor = require('./services/slaMonitor');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
 
-app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
-  credentials: true,
-}));
+app.use(
+  cors({
+    origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+    credentials: true,
+  })
+);
 app.use(express.json());
 app.use(cookieParser());
 
@@ -38,6 +46,9 @@ app.use('/api/users', userRoutes);
 app.use('/api/tickets', ticketRoutes);
 app.use('/api/kb', kbRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/catalog', catalogRoutes);
+app.use('/api/email', emailRoutes);
 
 // ─── Global error handler ─────────────────────────────────────────────────────
 
@@ -56,4 +67,8 @@ app.listen(PORT, async () => {
     console.error(`✗ Database connection failed: ${err.message}`);
   }
   console.log(`✓ Dispatchly API → http://localhost:${PORT}`);
+
+  // Start background services
+  slaMonitor.start();
+  emailPoller.start();
 });

@@ -11,6 +11,7 @@ const {
   addComment,
   convertToKb,
 } = require('../controllers/ticketController');
+const { getApproval, approveTicket, rejectTicket } = require('../controllers/approvalController');
 const { CAN_ESCALATE, CAN_RESOLVE, CAN_CONVERT_KB } = require('../config/constants');
 
 // All ticket routes require authentication
@@ -24,7 +25,11 @@ router.post('/', validate(['title', 'description']), createTicket);
 router.get('/:id', getTicket);
 
 // Only staff can mutate ticket status/fields
-router.patch('/:id', requireRole('admin', 'manager', 'agent', 'technician', 'specialist'), updateTicket);
+router.patch(
+  '/:id',
+  requireRole('admin', 'manager', 'agent', 'technician', 'specialist'),
+  updateTicket
+);
 
 // Escalate: agent-level and above only
 router.post('/:id/escalate', requireRole(...CAN_ESCALATE), escalateTicket);
@@ -34,5 +39,10 @@ router.post('/:id/comments', addComment);
 
 // Convert resolved ticket to KB: agent-level specialists
 router.post('/:id/convert-to-kb', requireRole(...CAN_CONVERT_KB), convertToKb);
+
+// Approval workflow (managers and admins only)
+router.get('/:id/approval', getApproval);
+router.post('/:id/approve', requireRole('admin', 'manager'), approveTicket);
+router.post('/:id/reject', requireRole('admin', 'manager'), rejectTicket);
 
 module.exports = router;

@@ -1,5 +1,6 @@
 import { Outlet, useFetcher } from 'react-router-dom';
 import { useCurrentUser } from '../../context/AuthContext';
+import { NotificationBell } from '../ui/NotificationBell';
 import { Sidebar } from './Sidebar';
 
 function UserMenu() {
@@ -36,6 +37,7 @@ function UserMenu() {
           <p className="text-sm font-medium text-gray-900 truncate">{user.name}</p>
           <p className="text-xs text-gray-500 truncate">{roleLabel}</p>
         </div>
+        <NotificationBell />
       </div>
       <fetcher.Form method="post" action="/logout">
         <button

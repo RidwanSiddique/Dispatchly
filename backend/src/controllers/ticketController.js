@@ -2,6 +2,34 @@ const pool = require('../db/pool');
 const { SLA_MINUTES, ESCALATION_TEAMS, REQUESTER_ROLES } = require('../config/constants');
 const { enrich } = require('../utils/sla');
 
+// ─── Notification helpers ─────────────────────────────────────────────────────
+
+async function notifyUser(userId, ticketId, type, message) {
+  if (!userId) return;
+  try {
+    await pool.query(
+      'INSERT INTO notifications (user_id, ticket_id, type, message) VALUES ($1,$2,$3,$4)',
+      [userId, ticketId, type, message]
+    );
+  } catch {
+    // non-fatal
+  }
+}
+
+async function notifyUsers(userIds, ticketId, type, message) {
+  await Promise.all(userIds.map((uid) => notifyUser(uid, ticketId, type, message)));
+}
+
+function statusMessage(status, title) {
+  const map = {
+    'In Progress': `Work has started on your ticket "${title}"`,
+    Resolved: `Your ticket "${title}" has been resolved`,
+    Closed: `Your ticket "${title}" has been closed`,
+    Escalated: `Your ticket "${title}" has been escalated for priority handling`,
+  };
+  return map[status] ?? `Your ticket "${title}" status updated to ${status}`;
+}
+
 // ─── Query helpers ────────────────────────────────────────────────────────────
 
 /**
@@ -40,7 +68,9 @@ function buildWhere(filters) {
   }
   if (filters.search) {
     const i = p();
-    conditions.push(`(t.title ILIKE $${i} OR t.requester_name ILIKE $${i} OR t.description ILIKE $${i})`);
+    conditions.push(
+      `(t.title ILIKE $${i} OR t.requester_name ILIKE $${i} OR t.description ILIKE $${i})`
+    );
     values.push(`%${filters.search}%`);
   }
 
@@ -71,12 +101,16 @@ const getTickets = async (req, res, next) => {
       roleFilters.assigned_to_user_id = userId;
     }
 
-    const { where, values, nextN } = buildWhere({ status, priority, type, category, search, ...roleFilters });
+    const { where, values, nextN } = buildWhere({
+      status,
+      priority,
+      type,
+      category,
+      search,
+      ...roleFilters,
+    });
 
-    const countRes = await pool.query(
-      `SELECT COUNT(*) FROM tickets t ${where}`,
-      values
-    );
+    const countRes = await pool.query(`SELECT COUNT(*) FROM tickets t ${where}`, values);
     const total = parseInt(countRes.rows[0].count, 10);
 
     const n = nextN();
@@ -211,6 +245,20 @@ const createTicket = async (req, res, next) => {
       ]
     );
 
+    // Notify managers + admins when a requester opens a new ticket
+    if (isRequester) {
+      const { rows: staff } = await pool.query(
+        `SELECT id FROM users WHERE role IN ('admin','manager') AND is_active = TRUE`
+      );
+      const shortTitle = ticket.title.slice(0, 60) + (ticket.title.length > 60 ? '…' : '');
+      const msg = `New ticket from ${requester_name}: "${shortTitle}"`;
+      await Promise.all(
+        staff.map((s) =>
+          notifyUser(s.id, ticket.id, 'new_ticket', msg)
+        )
+      );
+    }
+
     res.status(201).json(enrich(ticket));
   } catch (err) {
     next(err);
@@ -222,7 +270,7 @@ const createTicket = async (req, res, next) => {
  */
 const updateTicket = async (req, res, next) => {
   try {
-    const { role } = req.user;
+    const { role, userId: actorId } = req.user;
     const ALLOWED = [
       'status',
       'priority',
@@ -259,6 +307,12 @@ const updateTicket = async (req, res, next) => {
       return res.status(400).json({ error: 'No valid fields to update' });
     }
 
+    // Fetch current state before update so we can diff what changed
+    const {
+      rows: [oldTicket],
+    } = await pool.query('SELECT * FROM tickets WHERE id = $1', [req.params.id]);
+    if (!oldTicket) return res.status(404).json({ error: 'Ticket not found' });
+
     sets.push(`updated_at = $${values.length + 1}`);
     values.push(new Date());
     values.push(req.params.id); // for WHERE
@@ -273,6 +327,39 @@ const updateTicket = async (req, res, next) => {
     );
 
     if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
+
+    // ── Notifications ───────────────────────────────────────────────────────
+    const shortTitle = ticket.title.slice(0, 60) + (ticket.title.length > 60 ? '…' : '');
+
+    // Status changed
+    if (req.body.status && req.body.status !== oldTicket.status) {
+      const msg = statusMessage(req.body.status, shortTitle);
+      const recipients = new Set();
+      if (ticket.created_by_user_id && ticket.created_by_user_id !== actorId) {
+        recipients.add(ticket.created_by_user_id);
+      }
+      if (ticket.assigned_to_user_id && ticket.assigned_to_user_id !== actorId) {
+        recipients.add(ticket.assigned_to_user_id);
+      }
+      await notifyUsers([...recipients], ticket.id, 'ticket_updated', msg);
+    }
+
+    // Assignment changed — notify new assignee
+    if (
+      req.body.assigned_to_user_id !== undefined &&
+      req.body.assigned_to_user_id !== oldTicket.assigned_to_user_id &&
+      ticket.assigned_to_user_id &&
+      ticket.assigned_to_user_id !== actorId
+    ) {
+      await notifyUser(
+        ticket.assigned_to_user_id,
+        ticket.id,
+        'ticket_assigned',
+        `You have been assigned ticket #${ticket.id}: "${shortTitle}"`
+      );
+    }
+    // ── End notifications ────────────────────────────────────────────────────
+
     res.json(enrich(ticket));
   } catch (err) {
     next(err);
@@ -316,6 +403,19 @@ const escalateTicket = async (req, res, next) => {
         [ticket.id]
       ),
     ]);
+
+    // Notify requester + previously assigned agent
+    const shortTitle = ticket.title.slice(0, 60) + (ticket.title.length > 60 ? '…' : '');
+    const actorId = req.user.userId;
+    const escMsg = `Your ticket "${shortTitle}" has been escalated to ${team} for priority handling`;
+    const recipients = new Set();
+    if (ticket.created_by_user_id && ticket.created_by_user_id !== actorId) {
+      recipients.add(ticket.created_by_user_id);
+    }
+    if (ticket.assigned_to_user_id && ticket.assigned_to_user_id !== actorId) {
+      recipients.add(ticket.assigned_to_user_id);
+    }
+    await notifyUsers([...recipients], ticket.id, 'ticket_escalated', escMsg);
 
     res.json({ ticket: enrich(updated), escalation });
   } catch (err) {
@@ -364,6 +464,46 @@ const addComment = async (req, res, next) => {
           )
         : Promise.resolve(),
     ]);
+
+    // ── Notifications ───────────────────────────────────────────────────────
+    const shortTitle = ticket.title.slice(0, 60) + (ticket.title.length > 60 ? '…' : '');
+
+    if (!internal) {
+      if (REQUESTER_ROLES.includes(role)) {
+        // Client/requester replied → notify assigned agent
+        if (ticket.assigned_to_user_id && ticket.assigned_to_user_id !== userId) {
+          await notifyUser(
+            ticket.assigned_to_user_id,
+            ticket.id,
+            'ticket_replied',
+            `${userName} replied on ticket "${shortTitle}"`
+          );
+        }
+      } else {
+        // Staff replied → notify requester
+        if (ticket.created_by_user_id && ticket.created_by_user_id !== userId) {
+          await notifyUser(
+            ticket.created_by_user_id,
+            ticket.id,
+            'ticket_replied',
+            `${userName} replied on your ticket "${shortTitle}"`
+          );
+        }
+      }
+    }
+
+    // If ticket auto-advanced to In Progress, also notify the requester
+    if (ticket.status === 'New' && !REQUESTER_ROLES.includes(role)) {
+      if (ticket.created_by_user_id && ticket.created_by_user_id !== userId) {
+        await notifyUser(
+          ticket.created_by_user_id,
+          ticket.id,
+          'ticket_updated',
+          `Work has started on your ticket "${shortTitle}"`
+        );
+      }
+    }
+    // ── End notifications ────────────────────────────────────────────────────
 
     res.status(201).json(comment);
   } catch (err) {

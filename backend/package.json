@@ -24,7 +24,10 @@
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "imapflow": "^1.0.163",
     "jsonwebtoken": "^9.0.2",
+    "mailparser": "^3.7.1",
+    "node-cron": "^3.0.3",
     "pg": "^8.22.0"
   },
   "devDependencies": {

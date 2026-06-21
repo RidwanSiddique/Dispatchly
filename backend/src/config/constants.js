@@ -15,7 +15,14 @@ const ESCALATION_TEAMS = {
   'Account Access': 'Identity & Access Management Team',
 };
 
-const TICKET_STATUSES = ['New', 'In Progress', 'Escalated', 'Resolved', 'Closed'];
+const TICKET_STATUSES = [
+  'New',
+  'In Progress',
+  'Escalated',
+  'Resolved',
+  'Closed',
+  'Pending Approval',
+];
 const TICKET_TYPES = ['Incident', 'Service Request'];
 const TICKET_PRIORITIES = ['P1', 'P2', 'P3', 'P4'];
 const TICKET_CATEGORIES = Object.keys(ESCALATION_TEAMS);

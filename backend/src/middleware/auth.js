@@ -26,7 +26,8 @@ const requireAuth = (req, res, next) => {
  *
  * Usage: requireRole('admin', 'manager')
  */
-const requireRole = (...roles) =>
+const requireRole =
+  (...roles) =>
   (req, res, next) => {
     if (!req.user) return res.status(401).json({ error: 'Authentication required' });
     if (req.user.role === 'admin') return next(); // admin bypasses all role checks

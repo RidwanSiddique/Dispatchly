@@ -2,6 +2,7 @@ import { createBrowserRouter, RouterProvider, redirect } from 'react-router-dom'
 
 import { Layout } from './components/layout/Layout';
 import { AdminUsersPage, adminUsersAction, adminUsersLoader } from './pages/AdminUsersPage';
+import CatalogPage, { catalogAction, catalogLoader } from './pages/CatalogPage';
 import { DashboardPage, dashboardLoader } from './pages/DashboardPage';
 import { KbArticlePage, kbArticleLoader } from './pages/KbArticlePage';
 import { KbPage, kbLoader } from './pages/KbPage';
@@ -60,6 +61,12 @@ const router = createBrowserRouter([
         element: <TicketDetailPage />,
         loader: ticketDetailLoader,
         action: ticketDetailAction,
+      },
+      {
+        path: 'catalog',
+        element: <CatalogPage />,
+        loader: catalogLoader,
+        action: catalogAction,
       },
       { path: 'kb', element: <KbPage />, loader: kbLoader },
       { path: 'kb/:id', element: <KbArticlePage />, loader: kbArticleLoader },

@@ -20,8 +20,7 @@ const getDashboard = async (req, res, next) => {
     const hasFilter = values.length > 0;
 
     // Dynamic query fragment helper
-    const scoped = (baseWhere) =>
-      hasFilter ? `${baseWhere} ${clause}` : baseWhere;
+    const scoped = (baseWhere) => (hasFilter ? `${baseWhere} ${clause}` : baseWhere);
 
     const [
       totalsRes,

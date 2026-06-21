@@ -22,10 +22,9 @@ const login = async (req, res, next) => {
 
     const {
       rows: [user],
-    } = await pool.query(
-      'SELECT * FROM users WHERE email = $1 AND is_active = TRUE',
-      [email.trim().toLowerCase()]
-    );
+    } = await pool.query('SELECT * FROM users WHERE email = $1 AND is_active = TRUE', [
+      email.trim().toLowerCase(),
+    ]);
 
     if (!user) return res.status(401).json({ error: 'Invalid email or password' });
 
