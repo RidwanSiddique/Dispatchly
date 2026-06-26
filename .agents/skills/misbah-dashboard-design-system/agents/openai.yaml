@@ -1,0 +1,5 @@
+interface:
+  display_name: "Misbah Admin UI System"
+  short_description: "Misbah React dashboard UI patterns"
+  brand_color: "#ffd665"
+  default_prompt: "Use $misbah-dashboard-design-system to build or refine Misbah Admin dashboard UI with Next.js App Router patterns, shadcn/ui, react-hook-form, and shared URL-driven datatables."

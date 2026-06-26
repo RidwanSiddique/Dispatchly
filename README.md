@@ -50,8 +50,9 @@ role — create a dedicated role/password instead and update `.env` to match if 
 createdb dispatchly
 
 # Optional: create a dedicated role with a password
-psql -d postgres -c "CREATE ROLE dispatchly WITH LOGIN PASSWORD 'yourpassword';"
-psql -d postgres -c "GRANT ALL PRIVILEGES ON DATABASE dispatchly TO dispatchly;"
+psql -d dispatchly -c "CREATE ROLE dispatchly WITH LOGIN PASSWORD 'yourpassword';"
+psql -d dispatchly -c "GRANT ALL PRIVILEGES ON DATABASE dispatchly TO dispatchly;"
+psql -d dispatchly -c "ALTER SCHEMA public OWNER TO dispatchly;"
 ```
 
 The schema itself is created later by the migrations (`npm run migrate` in the Backend step).
