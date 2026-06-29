@@ -4,20 +4,24 @@ const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const pool = require('./db/pool');
 
-const authRoutes = require('./routes/auth');
-const ticketRoutes = require('./routes/tickets');
-const kbRoutes = require('./routes/kb');
-const dashboardRoutes = require('./routes/dashboard');
-const userRoutes = require('./routes/users');
+const authRoutes         = require('./routes/auth');
+const ticketRoutes       = require('./routes/tickets');
+const kbRoutes           = require('./routes/kb');
+const dashboardRoutes    = require('./routes/dashboard');
+const userRoutes         = require('./routes/users');
 const notificationRoutes = require('./routes/notifications');
 const catalogRoutes      = require('./routes/catalog');
 const emailRoutes        = require('./routes/email');
 const oncallRoutes       = require('./routes/oncall');
 const problemRoutes      = require('./routes/problems');
 const changeRoutes       = require('./routes/changes');
+const departmentRoutes   = require('./routes/departments');
+const skillRoutes        = require('./routes/skills');
+const agentStatusRoutes  = require('./routes/agentStatus');
 
-const emailPoller = require('./services/emailPoller');
-const slaMonitor = require('./services/slaMonitor');
+const emailPoller     = require('./services/emailPoller');
+const slaMonitor      = require('./services/slaMonitor');
+const scheduleManager = require('./services/scheduleManager');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -44,17 +48,20 @@ app.get('/health', async (_req, res) => {
   }
 });
 
-app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/tickets', ticketRoutes);
-app.use('/api/kb', kbRoutes);
-app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/auth',          authRoutes);
+app.use('/api/users',         userRoutes);
+app.use('/api/tickets',       ticketRoutes);
+app.use('/api/kb',            kbRoutes);
+app.use('/api/dashboard',     dashboardRoutes);
 app.use('/api/notifications', notificationRoutes);
-app.use('/api/catalog', catalogRoutes);
-app.use('/api/email', emailRoutes);
-app.use('/api/oncall', oncallRoutes);
-app.use('/api/problems', problemRoutes);
-app.use('/api/changes', changeRoutes);
+app.use('/api/catalog',       catalogRoutes);
+app.use('/api/email',         emailRoutes);
+app.use('/api/oncall',        oncallRoutes);
+app.use('/api/problems',      problemRoutes);
+app.use('/api/changes',       changeRoutes);
+app.use('/api/departments',   departmentRoutes);
+app.use('/api/skills',        skillRoutes);
+app.use('/api/agent-status',  agentStatusRoutes);
 
 // ─── Global error handler ─────────────────────────────────────────────────────
 
@@ -77,4 +84,5 @@ app.listen(PORT, async () => {
   // Start background services
   slaMonitor.start();
   emailPoller.start();
+  scheduleManager.start(); // auto status transitions every minute
 });

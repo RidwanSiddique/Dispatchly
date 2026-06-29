@@ -1,7 +1,9 @@
 const pool = require('../db/pool');
+const { updateAgentStatus } = require('../services/scheduleManager');
+const { notify } = require('../services/notifier');
 
 const STAFF_FIELDS =
-  'id, name, email, role, department, availability_status, skills, is_active';
+  'id, name, email, role, department, availability_status, current_status, skills, is_active';
 
 // ─── GET /api/oncall ─────────────────────────────────────────────────────────
 // Returns: current on-call users, all staff with their status, upcoming schedules
@@ -66,22 +68,13 @@ async function createSchedule(req, res, next) {
       [user_id, start_time, end_time, label, req.user.userId]
     );
 
-    // Auto-set user availability_status to on_call if schedule is active now
+    // Auto-set user status to on_call if schedule is active right now
     const now = new Date();
     if (new Date(start_time) <= now && new Date(end_time) >= now) {
-      await pool.query(
-        `UPDATE users SET availability_status = 'on_call' WHERE id = $1`,
-        [user_id]
-      );
-      // Notify the user
-      const {
-        rows: [user],
-      } = await pool.query('SELECT name FROM users WHERE id = $1', [user_id]);
-      await pool.query(
-        `INSERT INTO notifications (user_id, ticket_id, type, message)
-         VALUES ($1, NULL, 'ticket_assigned', $2)`,
-        [user_id, `You have been scheduled for on-call duty: ${label}`]
-      );
+      await updateAgentStatus(user_id, 'on_call', req.user.userId, false,
+        `Assigned to on-call: ${label}`);
+      await notify(user_id, null, 'ticket_assigned',
+        `📟 You have been scheduled for on-call duty: ${label}`);
     }
 
     res.status(201).json(schedule);

@@ -3,6 +3,8 @@ const { SLA_MINUTES, ESCALATION_TEAMS, REQUESTER_ROLES } = require('../config/co
 const { enrich } = require('../utils/sla');
 const { getCurrentOncallUser } = require('./oncallController');
 const { notify, notifyMany } = require('../services/notifier');
+const { autoAssign } = require('../services/skillsRouter');
+const { onTicketResolved } = require('../services/scheduleManager');
 
 // ─── Notification helpers (thin wrappers kept for backward compat) ────────────
 
@@ -321,6 +323,16 @@ const createTicket = async (req, res, next) => {
     // Spawn SLA definition instances for this ticket (non-blocking)
     spawnTicketSlas(ticket.id, ticket.priority, ticket.category);
 
+    // Skills-based auto-assignment (non-blocking, only if ticket is unassigned)
+    if (!ticket.assigned_to_user_id) {
+      autoAssign(ticket).then((agent) => {
+        if (agent) {
+          notify(ticket.created_by_user_id, ticket.id, 'ticket_assigned',
+            `Ticket #${ticket.id} was auto-assigned to ${agent.name} based on skills and availability.`);
+        }
+      }).catch(() => {});
+    }
+
     res.status(201).json(enrich(ticket));
   } catch (err) {
     next(err);
@@ -443,6 +455,10 @@ const updateTicket = async (req, res, next) => {
          WHERE ticket_id = $1 AND status = 'active'`,
         [ticket.id]
       ).catch(() => {});
+      // Transition assigned agent from busy → available/on_duty
+      if (ticket.assigned_to_user_id) {
+        onTicketResolved(ticket.assigned_to_user_id).catch(() => {});
+      }
     }
 
     res.json(enrich(ticket));

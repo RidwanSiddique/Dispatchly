@@ -5,7 +5,7 @@ import { AdminUsersPage, adminUsersAction, adminUsersLoader } from './pages/Admi
 import CatalogPage, { catalogAction, catalogLoader } from './pages/CatalogPage';
 import ChangeDetailPage, { changeDetailAction, changeDetailLoader } from './pages/ChangeDetailPage';
 import ChangesPage, { changesAction, changesLoader } from './pages/ChangesPage';
-import { DashboardPage, dashboardLoader } from './pages/DashboardPage';
+import DashboardPage, { dashboardLoader } from './pages/DashboardPage';
 import { KbArticlePage, kbArticleLoader } from './pages/KbArticlePage';
 import { KbPage, kbLoader } from './pages/KbPage';
 import LoginPage, { loginAction } from './pages/LoginPage';
@@ -18,6 +18,10 @@ import ProblemDetailPage, {
 import ProblemsPage, { problemsAction, problemsLoader } from './pages/ProblemsPage';
 import { TicketDetailPage, ticketDetailAction, ticketDetailLoader } from './pages/TicketDetailPage';
 import { TicketsPage, ticketsLoader } from './pages/TicketsPage';
+import OrgPage, { orgLoader } from './pages/OrgPage';
+import AgentStatusPage, { agentStatusLoader } from './pages/AgentStatusPage';
+import SkillsPage, { skillsLoader } from './pages/SkillsPage';
+import SchedulesPage, { schedulesLoader } from './pages/SchedulesPage';
 
 /**
  * Root loader — fetches the current user.
@@ -122,6 +126,18 @@ const router = createBrowserRouter([
         loader: adminUsersLoader,
         action: adminUsersAction,
       },
+
+      // Organisation hierarchy
+      { path: 'org', element: <OrgPage />, loader: orgLoader },
+
+      // Agent status board
+      { path: 'agent-status', element: <AgentStatusPage />, loader: agentStatusLoader },
+
+      // Skills management
+      { path: 'skills', element: <SkillsPage />, loader: skillsLoader },
+
+      // Work schedules
+      { path: 'schedules', element: <SchedulesPage />, loader: schedulesLoader },
     ],
   },
 ]);
