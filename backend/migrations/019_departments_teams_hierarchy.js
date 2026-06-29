@@ -75,7 +75,7 @@ exports.up = async (client) => {
 
   await client.query(`
     INSERT INTO teams (name, department_id, description)
-    SELECT name, d.id, desc
+    SELECT t_name, d.id, t_desc
     FROM (VALUES
       ('Hardware Support',    'IT',  'Physical hardware and device repair'),
       ('Network Engineering', 'IT',  'Network infrastructure and connectivity'),
@@ -84,7 +84,7 @@ exports.up = async (client) => {
       ('Cloud & DevOps',      'IT',  'Cloud infrastructure and deployments'),
       ('HR Operations',       'HR',  'Onboarding, offboarding, and HR systems'),
       ('Client Support',      'CS',  'External client ticket handling')
-    ) AS t(name, dept_code, desc)
+    ) AS t(t_name, dept_code, t_desc)
     JOIN departments d ON d.code = t.dept_code
     ON CONFLICT DO NOTHING
   `);
