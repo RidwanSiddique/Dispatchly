@@ -28,6 +28,7 @@
     "jsonwebtoken": "^9.0.2",
     "mailparser": "^3.7.1",
     "node-cron": "^3.0.3",
+    "nodemailer": "^9.0.1",
     "pg": "^8.22.0"
   },
   "devDependencies": {

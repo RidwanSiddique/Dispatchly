@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dispatchly vs. Enterprise ITSM — Feature Comparison</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f1117; color: #e2e8f0; min-height: 100vh; }
+
+  /* ── Header ── */
+  .header { padding: 24px 28px 0; }
+  .header-top { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+  .title { font-size: 22px; font-weight: 800; color: #f1f5f9; letter-spacing: -.4px; }
+  .subtitle { font-size: 13px; color: #64748b; margin-top: 4px; }
+
+  /* ── Tabs ── */
+  .tabs { display: flex; gap: 2px; padding: 20px 28px 0; background: #0f1117; border-bottom: 1px solid #1e2535; position: sticky; top: 0; z-index: 100; }
+  .tab { padding: 10px 18px; border-radius: 8px 8px 0 0; cursor: pointer; font-size: 12px; font-weight: 600; color: #64748b; background: #161b27; border: 1px solid #1e2535; border-bottom: none; transition: all .15s; white-space: nowrap; }
+  .tab:hover { color: #94a3b8; }
+  .tab.active { color: #e2e8f0; background: #1e293b; border-color: #334155; }
+  .tab-content { display: none; padding: 24px 28px; }
+  .tab-content.active { display: block; }
+
+  h2 { font-size: 17px; font-weight: 700; color: #f1f5f9; margin-bottom: 5px; }
+  h3 { font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 12px; }
+  .desc { font-size: 13px; color: #64748b; margin-bottom: 22px; line-height: 1.6; }
+
+  /* ── Platform pills ── */
+  .platforms { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 24px; }
+  .platform-pill { display: flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 99px; font-size: 12px; font-weight: 700; }
+  .p-dispatchly { background: #1e3a5f33; border: 1.5px solid #3b82f6; color: #93c5fd; }
+  .p-servicenow { background: #14532d33; border: 1.5px solid #22c55e; color: #86efac; }
+  .p-jira       { background: #1e3a8a33; border: 1.5px solid #6366f1; color: #a5b4fc; }
+  .p-zendesk    { background: #713f1233; border: 1.5px solid #f59e0b; color: #fde68a; }
+
+  /* ── Main comparison table ── */
+  .compare-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 800px; }
+  thead th { padding: 12px 14px; font-weight: 700; font-size: 12px; border-bottom: 2px solid #334155; text-align: center; vertical-align: bottom; }
+  thead th:first-child { text-align: left; width: 220px; }
+  .th-dispatchly { color: #93c5fd; background: #1e3a5f22; }
+  .th-servicenow { color: #86efac; background: #14532d22; }
+  .th-jira       { color: #a5b4fc; background: #1e3a8a22; }
+  .th-zendesk    { color: #fde68a; background: #71400022; }
+
+  tbody td { padding: 10px 14px; border-bottom: 1px solid #1a2235; vertical-align: middle; }
+  tbody td:not(:first-child) { text-align: center; }
+  tbody tr:hover td { background: #1e293b44; }
+
+  .section-row td { background: #0f1117; padding: 14px 14px 8px; }
+  .section-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: #475569; display: flex; align-items: center; gap: 8px; }
+  .section-label::after { content: ''; flex: 1; height: 1px; background: #1e2535; }
+
+  .feature-name { color: #cbd5e1; font-weight: 500; }
+  .feature-sub  { font-size: 10px; color: #475569; margin-top: 2px; }
+
+  /* Status icons */
+  .full    { color: #4ade80; font-size: 16px; }
+  .partial { color: #fbbf24; font-size: 14px; }
+  .none    { color: #1e293b; font-size: 16px; }
+  .ai      { font-size: 13px; }
+
+  /* ── Score cards ── */
+  .score-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+  .score-card { border-radius: 12px; padding: 18px; border: 1px solid; }
+  .score-card.dispatchly { border-color: #3b82f644; background: #1e3a5f22; }
+  .score-card.servicenow { border-color: #22c55e44; background: #14532d22; }
+  .score-card.jira       { border-color: #6366f144; background: #1e3a8a22; }
+  .score-card.zendesk    { border-color: #f59e0b44; background: #71400022; }
+  .score-name { font-size: 13px; font-weight: 800; margin-bottom: 12px; }
+  .score-bar-wrap { margin-bottom: 8px; }
+  .score-bar-label { display: flex; justify-content: space-between; font-size: 10px; color: #64748b; margin-bottom: 4px; }
+  .score-bar-track { height: 6px; background: #1e293b; border-radius: 3px; overflow: hidden; }
+  .score-bar-fill  { height: 100%; border-radius: 3px; }
+  .fill-blue   { background: #3b82f6; }
+  .fill-green  { background: #22c55e; }
+  .fill-indigo { background: #6366f1; }
+  .fill-amber  { background: #f59e0b; }
+
+  /* ── Strength/Gap cards ── */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+  .card { background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 16px; }
+  .card-title { font-size: 12px; font-weight: 700; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+  .item-list { display: flex; flex-direction: column; gap: 6px; }
+  .item { display: flex; align-items: flex-start; gap: 8px; font-size: 12px; color: #94a3b8; line-height: 1.5; }
+  .item-dot { width: 6px; height: 6px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
+  .dot-green  { background: #4ade80; }
+  .dot-red    { background: #f87171; }
+  .dot-yellow { background: #fbbf24; }
+  .dot-blue   { background: #60a5fa; }
+
+  /* ── Roadmap ── */
+  .roadmap-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .roadmap-card { background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 14px; }
+  .roadmap-title { font-size: 12px; font-weight: 700; color: #f1f5f9; margin-bottom: 4px; }
+  .roadmap-sub   { font-size: 10px; color: #475569; margin-bottom: 10px; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 10px; font-weight: 700; }
+  .badge-easy   { background: #14532d; color: #86efac; }
+  .badge-medium { background: #713f12; color: #fde047; }
+  .badge-hard   { background: #7f1d1d; color: #fca5a5; }
+  .badge-blue   { background: #1e3a5f; color: #93c5fd; }
+
+  /* ── Positioning ── */
+  .positioning-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  .pos-card { border-radius: 10px; padding: 16px; border: 1px solid; }
+
+  /* Legend */
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; font-size: 11px; color: #64748b; }
+  .legend-item { display: flex; align-items: center; gap: 5px; }
+
+  /* Divider */
+  .divider { height: 1px; background: #1e293b; margin: 20px 0; }
+
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: #0f1117; }
+  ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <div>
+      <div class="title">⚡ Dispatchly vs. Enterprise ITSM Platforms</div>
+      <div class="subtitle">Side-by-side feature comparison — what we have, what they have, and where we stand</div>
+    </div>
+    <div class="platforms">
+      <div class="platform-pill p-dispatchly">⚡ Dispatchly <span style="font-weight:400;opacity:.7">(Ours)</span></div>
+      <div class="platform-pill p-servicenow">🟢 ServiceNow</div>
+      <div class="platform-pill p-jira">🔵 Jira Service Mgmt</div>
+      <div class="platform-pill p-zendesk">🟡 Zendesk</div>
+    </div>
+  </div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('overview')">📊 Score Overview</div>
+  <div class="tab" onclick="switchTab('matrix')">📋 Full Feature Matrix</div>
+  <div class="tab" onclick="switchTab('strengths')">💪 Strengths & Gaps</div>
+  <div class="tab" onclick="switchTab('roadmap')">🗺 What to Build Next</div>
+  <div class="tab" onclick="switchTab('positioning')">🎯 Market Positioning</div>
+</div>
+
+<!-- ═══════════════════ TAB 1: OVERVIEW ═══════════════════ -->
+<div id="tab-overview" class="tab-content active">
+  <h2>Platform Score Overview</h2>
+  <p class="desc">How Dispatchly stacks up across key ITSM capability areas — scored 0–100 based on depth and completeness of each feature</p>
+
+  <div class="score-grid">
+    <!-- Dispatchly -->
+    <div class="score-card dispatchly">
+      <div class="score-name" style="color:#93c5fd;">⚡ Dispatchly</div>
+      <div class="score-bar-wrap"><div class="score-bar-label"><span>Ticket Management</span><span>80</span></div><div class="score-bar-track"><div class="score-bar-fill fill-blue" style="width:80%"></div></div></div>
+      <div class="score-bar-wrap"><div class="score-bar-label"><span>SLA / Escalation</span><span>70</span></div><div class="score-bar-track"><div class="score-bar-fill fill-blue" style="width:70%"></div></div></div>
+      <div class="score-bar-wrap"><div class="score-bar-label"><span>Knowledge Base</span><span>60</span></div><div class="score-bar-track"><div class="score-bar-fill fill-blue" style="width:60%"></div></div></div>
+      <div class="score-bar-wrap"><div class="score-bar-label"><span>Change Management</span><span>55</span></div><div class="score-bar-track"><div class="score-bar-fill fill-blue" style="width:55%"></div></div></div>
+      <div class="score-bar-wrap"><div class="score-bar-label"><span>Problem Management</span><span>60</span></div><div class="score-bar-track"><div class="score-bar-fill fill-blue" style="width:60%"></div></div></div>
+      <div class="score-bar-wrap"><div class="score-bar-label"><span>Automation / AI</span><span>15</span></div><div class="score-bar-track"><div class="score-bar-fill fill-blue" style="width:15%"></div></div></div>
+      <div class="score-bar-wrap"><div class="score-bar-label"><span>Asset / CMDB</span><span>0</span></div><div class="score-bar-track"><div class="score-bar-fill fill-blue" style="width:0%"></div></div></div>
+      <div class="score-bar-wrap"><div class="score-bar-label"><span>Reporting / Analytics</span><span>40</span></div><div class="score-bar-track"><div class="score-bar-fill fill-blue" style="width:40%"></div></div></div>
+      <div class="score-bar-wrap"><div class="score-bar-label"><span>Self-Service Portal</span><span>55</span></div><div class="score-bar-track"><div class="score-bar-fill fill-blue" style="width:55%"></div></div></div>
+      <div class="score-bar-wrap"><div class="score-bar-label"><span>Integrations</span><span>20</span></div><div class="score-bar-track"><div class="score-bar-fill fill-blue" style="width:20%"></div></div></div>
+      <div style="margin-top:12px;font-size:11px;color:#475569;">Overall: ~46 / 100</div>
+    </div>
+
+    <!-- ServiceNow -->
+    <div class="score-card servicenow">
+      <div class="score-name" style="color:#86efac;">🟢 ServiceNow ITSM</div>
+      <div class="score-bar-wrap"><div class="score-bar-label"><span>Ticket Management</span><span>100</span></div><div class="score-bar-track"><div class="score-bar-fill fill-green" style="width:100%"></div></div></div>
+      <div class="score-bar-wrap"><div class="score-bar-label"><span>SLA / Escalation</span><span>100</span></div><div class="score-bar-track"><div class="score-bar-fill fill-green" style="width:100%"></div></div></div>
+      <div class="score-bar-wrap"><div class="score-bar-label"><span>Knowledge Base</span><span>95</span></div><div class="score-bar-track"><div class="score-bar-fill fill-green" style="width:95%"></div></div></div>
+      <div class="score-bar-wrap"><div class="score-bar-label"><span>Change Management</span><span>100</span></div><div class="score-bar-track"><div class="score-bar-fill fill-green" style="width:100%"></div></div></div>
+      <div class="score-bar-wrap"><div class="score-bar-label"><span>Problem Management</span><span>100</span></div><div class="score-bar-track"><div class="score-bar-fill fill-green" style="width:100%"></div></div></div>
+      <div class="score-bar-wrap"><div class="score-bar-label"><span>Automation / AI</span><span>98</span></div><div class="score-bar-track"><div class="score-bar-fill fill-green" style="width:98%"></div></div></div>
+      <div class="score-bar-wrap"><div class="score-bar-label"><span>Asset / CMDB</span><span>100</span></div><div class="score-bar-track"><div class="score-bar-fill fill-green" style="width:100%"></div></div></div>
+      <div class="score-bar-wrap"><div class="score-bar-label"><span>Reporting / Analytics</span><span>98</span></div><div class="score-bar-track"><div class="score-bar-fill fill-green" style="width:98%"></div></div></div>
+      <div class="score-bar-wrap"><div class="score-bar-label"><span>Self-Service Portal</span><span>95</span></div><div class="score-bar-track"><div class="score-bar-fill fill-green" style="width:95%"></div></div></div>
+      <div class="score-bar-wrap"><div class="score-bar-label"><span>Integrations</span><span>99</span></div><div class="score-bar-track"><div class="score-bar-fill fill-green" style="width:99%"></div></div></div>
+      <div style="margin-top:12px;font-size:11px;color:#475569;">Overall: ~99 / 100 · $10k–$20k+/yr</div>
+    </div>
+
+    <!-- Jira -->
+    <div class="score-card jira">
+      <div class="score-name" style="color:#a5b4fc;">🔵 Jira Service Mgmt</div>
+      <div class="score-bar-wrap"><div class="score-bar-label"><span>Ticket Management</span><span>95</span></div><div class="score-bar-track"><div class="score-bar-fill fill-indigo" style="width:95%"></div></div></div>
+      <div class="score-bar-wrap"><div class="score-bar-label"><span>SLA / Escalation</span><span>90</span></div><div class="score-bar-track"><div class="score-bar-fill fill-indigo" style="width:90%"></div></div></div>
+      <div class="score-bar-wrap"><div class="score-bar-label"><span>Knowledge Base</span><span>85</span></div><div class="score-bar-track"><div class="score-bar-fill fill-indigo" style="width:85%"></div></div></div>
+      <div class="score-bar-wrap"><div class="score-bar-label"><span>Change Management</span><span>90</span></div><div class="score-bar-track"><div class="score-bar-fill fill-indigo" style="width:90%"></div></div></div>
+      <div class="score-bar-wrap"><div class="score-bar-label"><span>Problem Management</span><span>90</span></div><div class="score-bar-track"><div class="score-bar-fill fill-indigo" style="width:90%"></div></div></div>
+      <div class="score-bar-wrap"><div class="score-bar-label"><span>Automation / AI</span><span>85</span></div><div class="score-bar-track"><div class="score-bar-fill fill-indigo" style="width:85%"></div></div></div>
+      <div class="score-bar-wrap"><div class="score-bar-label"><span>Asset / CMDB</span><span>80</span></div><div class="score-bar-track"><div class="score-bar-fill fill-indigo" style="width:80%"></div></div></div>
+      <div class="score-bar-wrap"><div class="score-bar-label"><span>Reporting / Analytics</span><span>85</span></div><div class="score-bar-track"><div class="score-bar-fill fill-indigo" style="width:85%"></div></div></div>
+      <div class="score-bar-wrap"><div class="score-bar-label"><span>Self-Service Portal</span><span>88</span></div><div class="score-bar-track"><div class="score-bar-fill fill-indigo" style="width:88%"></div></div></div>
+      <div class="score-bar-wrap"><div class="score-bar-label"><span>Integrations</span><span>95</span></div><div class="score-bar-track"><div class="score-bar-fill fill-indigo" style="width:95%"></div></div></div>
+      <div style="margin-top:12px;font-size:11px;color:#475569;">Overall: ~88 / 100 · ~$20–$60/agent/mo</div>
+    </div>
+
+    <!-- Zendesk -->
+    <div class="score-card zendesk">
+      <div class="score-name" style="color:#fde68a;">🟡 Zendesk</div>
+      <div class="score-bar-wrap"><div class="score-bar-label"><span>Ticket Management</span><span>95</span></div><div class="score-bar-track"><div class="score-bar-fill fill-amber" style="width:95%"></div></div></div>
+      <div class="score-bar-wrap"><div class="score-bar-label"><span>SLA / Escalation</span><span>80</span></div><div class="score-bar-track"><div class="score-bar-fill fill-amber" style="width:80%"></div></div></div>
+      <div class="score-bar-wrap"><div class="score-bar-label"><span>Knowledge Base</span><span>85</span></div><div class="score-bar-track"><div class="score-bar-fill fill-amber" style="width:85%"></div></div></div>
+      <div class="score-bar-wrap"><div class="score-bar-label"><span>Change Management</span><span>40</span></div><div class="score-bar-track"><div class="score-bar-fill fill-amber" style="width:40%"></div></div></div>
+      <div class="score-bar-wrap"><div class="score-bar-label"><span>Problem Management</span><span>50</span></div><div class="score-bar-track"><div class="score-bar-fill fill-amber" style="width:50%"></div></div></div>
+      <div class="score-bar-wrap"><div class="score-bar-label"><span>Automation / AI</span><span>85</span></div><div class="score-bar-track"><div class="score-bar-fill fill-amber" style="width:85%"></div></div></div>
+      <div class="score-bar-wrap"><div class="score-bar-label"><span>Asset / CMDB</span><span>30</span></div><div class="score-bar-track"><div class="score-bar-fill fill-amber" style="width:30%"></div></div></div>
+      <div class="score-bar-wrap"><div class="score-bar-label"><span>Reporting / Analytics</span><span>82</span></div><div class="score-bar-track"><div class="score-bar-fill fill-amber" style="width:82%"></div></div></div>
+      <div class="score-bar-wrap"><div class="score-bar-label"><span>Self-Service Portal</span><span>90</span></div><div class="score-bar-track"><div class="score-bar-fill fill-amber" style="width:90%"></div></div></div>
+      <div class="score-bar-wrap"><div class="score-bar-label"><span>Integrations</span><span>90</span></div><div class="score-bar-track"><div class="score-bar-fill fill-amber" style="width:90%"></div></div></div>
+      <div style="margin-top:12px;font-size:11px;color:#475569;">Overall: ~73 / 100 · ~$55–$115/agent/mo</div>
+    </div>
+  </div>
+
+  <!-- quick context -->
+  <div style="background:#1e293b;border:1px solid #334155;border-radius:10px;padding:16px;font-size:12px;color:#94a3b8;line-height:1.7;">
+    <strong style="color:#f1f5f9;">Context:</strong> Dispatchly is a custom-built ITSM system, not a commercial SaaS product. The score gap vs. ServiceNow/Jira is expected — those platforms have hundreds of engineers and decades of iteration. What matters is whether Dispatchly covers <em>your specific domain's needs</em>, and where the critical gaps are. The good news: the core ITSM triangle (incidents → SLA → escalation) is solid. The gaps are in AI, asset tracking, integrations, and advanced analytics.
+  </div>
+</div>
+
+<!-- ═══════════════════ TAB 2: MATRIX ═══════════════════ -->
+<div id="tab-matrix" class="tab-content">
+  <h2>Full Feature Matrix</h2>
+  <p class="desc">Every feature, side by side. ✅ = fully implemented · ⚡ = partial / basic · ❌ = not present</p>
+
+  <div class="legend">
+    <div class="legend-item">✅ Fully implemented</div>
+    <div class="legend-item">⚡ Partial / basic</div>
+    <div class="legend-item">❌ Not present</div>
+    <div class="legend-item">🤖 AI-powered</div>
+  </div>
+
+  <div class="compare-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Feature</th>
+          <th class="th-dispatchly">⚡ Dispatchly</th>
+          <th class="th-servicenow">🟢 ServiceNow</th>
+          <th class="th-jira">🔵 Jira SM</th>
+          <th class="th-zendesk">🟡 Zendesk</th>
+        </tr>
+      </thead>
+      <tbody>
+
+        <!-- INCIDENT / TICKET MANAGEMENT -->
+        <tr class="section-row"><td colspan="5"><div class="section-label">🎫 Incident & Ticket Management</div></td></tr>
+        <tr>
+          <td><div class="feature-name">Ticket creation (web form)</div></td>
+          <td class="full">✅</td><td class="full">✅</td><td class="full">✅</td><td class="full">✅</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">Email-to-ticket (IMAP + webhook)</div></td>
+          <td class="full">✅</td><td class="full">✅</td><td class="full">✅</td><td class="full">✅</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">Priority levels (P1–P4)</div></td>
+          <td class="full">✅</td><td class="full">✅</td><td class="full">✅</td><td class="full">✅</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">Ticket categorization</div></td>
+          <td class="partial">⚡ 5 fixed categories</td><td class="full">✅ Dynamic, unlimited</td><td class="full">✅ Custom</td><td class="full">✅ Custom</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">Ticket status lifecycle</div></td>
+          <td class="partial">⚡ 6 statuses (fixed)</td><td class="full">✅ Fully customizable</td><td class="full">✅ Custom workflows</td><td class="full">✅ Custom</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">Comments (public + internal notes)</div></td>
+          <td class="full">✅</td><td class="full">✅</td><td class="full">✅</td><td class="full">✅</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">Ticket assignment to agent</div></td>
+          <td class="full">✅</td><td class="full">✅</td><td class="full">✅</td><td class="full">✅</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">Accept / decline assignment</div></td>
+          <td class="full">✅</td><td class="full">✅</td><td class="partial">⚡</td><td class="none">❌</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">Manual escalation (with team routing)</div></td>
+          <td class="full">✅</td><td class="full">✅</td><td class="full">✅</td><td class="partial">⚡</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">Auto-escalation on SLA breach</div></td>
+          <td class="full">✅</td><td class="full">✅</td><td class="full">✅</td><td class="partial">⚡ via automation</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">Ticket types (Incident / Service Request)</div></td>
+          <td class="full">✅</td><td class="full">✅</td><td class="full">✅</td><td class="full">✅</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">Omnichannel (phone, chat, SMS, voice)</div></td>
+          <td class="none">❌</td><td class="full">✅</td><td class="partial">⚡ via integrations</td><td class="full">✅ Native</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">AI-powered ticket triage / routing</div></td>
+          <td class="none">❌</td><td class="full">✅ 🤖</td><td class="full">✅ 🤖</td><td class="full">✅ 🤖</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">Bulk ticket actions</div></td>
+          <td class="none">❌</td><td class="full">✅</td><td class="full">✅</td><td class="full">✅</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">Custom ticket fields</div></td>
+          <td class="none">❌</td><td class="full">✅</td><td class="full">✅</td><td class="full">✅</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">Major incident management</div></td>
+          <td class="none">❌</td><td class="full">✅</td><td class="full">✅ Premium only</td><td class="partial">⚡</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">Post-incident review / PIR</div></td>
+          <td class="none">❌</td><td class="full">✅</td><td class="full">✅ Premium</td><td class="partial">⚡</td>
+        </tr>
+
+        <!-- SLA -->
+        <tr class="section-row"><td colspan="5"><div class="section-label">⏱ SLA Management</div></td></tr>
+        <tr>
+          <td><div class="feature-name">SLA targets by priority</div></td>
+          <td class="full">✅ P1–P4 (ITIL)</td><td class="full">✅</td><td class="full">✅</td><td class="full">✅</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">SLA progress bar (visual)</div></td>
+          <td class="full">✅</td><td class="full">✅</td><td class="full">✅</td><td class="full">✅</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">At-risk alert (before breach)</div></td>
+          <td class="full">✅ at 75%</td><td class="full">✅ configurable</td><td class="full">✅</td><td class="full">✅</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">Breach notifications</div></td>
+          <td class="full">✅</td><td class="full">✅</td><td class="full">✅</td><td class="full">✅</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">Business hours SLA (pause on off-hours)</div></td>
+          <td class="none">❌</td><td class="full">✅</td><td class="full">✅</td><td class="full">✅</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">Multiple SLA per ticket / OLA / UC</div></td>
+          <td class="none">❌</td><td class="full">✅</td><td class="full">✅</td><td class="partial">⚡</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">SLA reporting & dashboards</div></td>
+          <td class="partial">⚡ basic counts</td><td class="full">✅ full analytics</td><td class="full">✅</td><td class="full">✅</td>
+        </tr>
+
+        <!-- KNOWLEDGE BASE -->
+        <tr class="section-row"><td colspan="5"><div class="section-label">📚 Knowledge Base</div></td></tr>
+        <tr>
+          <td><div class="feature-name">KB article creation & editing</div></td>
+          <td class="full">✅</td><td class="full">✅</td><td class="full">✅</td><td class="full">✅</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">Search & filter by category / tag</div></td>
+          <td class="full">✅</td><td class="full">✅</td><td class="full">✅</td><td class="full">✅</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">Publish / unpublish control</div></td>
+          <td class="full">✅</td><td class="full">✅</td><td class="full">✅</td><td class="full">✅</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">Convert resolved ticket → KB article</div></td>
+          <td class="full">✅</td><td class="full">✅</td><td class="full">✅</td><td class="partial">⚡</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">KB article linked to ticket</div></td>
+          <td class="full">✅</td><td class="full">✅</td><td class="full">✅</td><td class="full">✅</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">Article versioning / revision history</div></td>
+          <td class="none">❌</td><td class="full">✅</td><td class="full">✅</td><td class="full">✅</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">Article ratings / feedback</div></td>
+          <td class="none">❌</td><td class="full">✅</td><td class="full">✅</td><td class="full">✅</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">AI-suggested articles during ticket entry</div></td>
+          <td class="none">❌</td><td class="full">✅ 🤖 Agent Assist</td><td class="full">✅ 🤖</td><td class="full">✅ 🤖</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">Multi-language KB</div></td>
+          <td class="none">❌</td><td class="full">✅</td><td class="full">✅</td><td class="full">✅</td>
+        </tr>
+
+        <!-- SERVICE CATALOG -->
+        <tr class="section-row"><td colspan="5"><div class="section-label">📋 Service Catalog</div></td></tr>
+        <tr>
+          <td><div class="feature-name">Catalog item listing</div></td>
+          <td class="full">✅</td><td class="full">✅</td><td class="full">✅</td><td class="full">✅</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">Dynamic form fields per item</div></td>
+          <td class="full">✅</td><td class="full">✅</td><td class="full">✅</td><td class="full">✅</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">Approval workflow for catalog requests</div></td>
+          <td class="full">✅</td><td class="full">✅</td><td class="full">✅</td><td class="partial">⚡</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">Item categories & sorting</div></td>
+          <td class="partial">⚡ basic</td><td class="full">✅ rich hierarchy</td><td class="full">✅</td><td class="full">✅</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">Item images / rich descriptions</div></td>
+          <td class="none">❌</td><td class="full">✅</td><td class="full">✅</td><td class="full">✅</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">Order tracking / fulfillment</div></td>
+          <td class="none">❌</td><td class="full">✅</td><td class="partial">⚡</td><td class="partial">⚡</td>
+        </tr>
+
+        <!-- PROBLEM MANAGEMENT -->
+        <tr class="section-row"><td colspan="5"><div class="section-label">🔍 Problem Management</div></td></tr>
+        <tr>
+          <td><div class="feature-name">Create & track problem records</div></td>
+          <td class="full">✅</td><td class="full">✅</td><td class="full">✅</td><td class="partial">⚡</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">Link tickets to problems</div></td>
+          <td class="full">✅</td><td class="full">✅</td><td class="full">✅</td><td class="partial">⚡</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">Root cause analysis fields</div></td>
+          <td class="full">✅</td><td class="full">✅</td><td class="full">✅</td><td class="none">❌</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">Known error / workaround recording</div></td>
+          <td class="full">✅</td><td class="full">✅</td><td class="full">✅</td><td class="none">❌</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">Auto-resolve linked tickets on problem close</div></td>
+          <td class="full">✅</td><td class="full">✅</td><td class="full">✅</td><td class="none">❌</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">AI-assisted RCA</div></td>
+          <td class="none">❌</td><td class="full">✅ 🤖</td><td class="full">✅ 🤖</td><td class="none">❌</td>
+        </tr>
+
+        <!-- CHANGE MANAGEMENT -->
+        <tr class="section-row"><td colspan="5"><div class="section-label">🔄 Change Management</div></td></tr>
+        <tr>
+          <td><div class="feature-name">Change request creation (types: Std/Normal/Emergency)</div></td>
+          <td class="full">✅</td><td class="full">✅</td><td class="full">✅</td><td class="none">❌</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">Risk level assessment</div></td>
+          <td class="full">✅</td><td class="full">✅</td><td class="full">✅ AI-powered</td><td class="none">❌</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">Implementation + rollback plans</div></td>
+          <td class="full">✅</td><td class="full">✅</td><td class="full">✅</td><td class="none">❌</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">Maintenance window scheduling</div></td>
+          <td class="full">✅</td><td class="full">✅</td><td class="full">✅</td><td class="none">❌</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">Approval workflow (submit → approve/reject)</div></td>
+          <td class="full">✅</td><td class="full">✅</td><td class="full">✅</td><td class="none">❌</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">Link tickets to change</div></td>
+          <td class="full">✅</td><td class="full">✅</td><td class="full">✅</td><td class="none">❌</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">Change calendar (visual schedule)</div></td>
+          <td class="none">❌</td><td class="full">✅</td><td class="full">✅</td><td class="none">❌</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">CI/CD pipeline integration for changes</div></td>
+          <td class="none">❌</td><td class="full">✅</td><td class="full">✅ Native (Bitbucket/Jenkins)</td><td class="none">❌</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">Auto-approve low-risk changes</div></td>
+          <td class="none">❌</td><td class="full">✅</td><td class="full">✅ 🤖</td><td class="none">❌</td>
+        </tr>
+
+        <!-- ON-CALL -->
+        <tr class="section-row"><td colspan="5"><div class="section-label">📅 On-Call & Scheduling</div></td></tr>
+        <tr>
+          <td><div class="feature-name">On-call schedule management</div></td>
+          <td class="full">✅</td><td class="full">✅</td><td class="full">✅</td><td class="partial">⚡</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">P1 auto-assign to on-call tech</div></td>
+          <td class="full">✅</td><td class="full">✅</td><td class="full">✅</td><td class="partial">⚡</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">Page / urgent notification</div></td>
+          <td class="full">✅ in-app</td><td class="full">✅ SMS/email/voice</td><td class="full">✅ SMS/push/email</td><td class="partial">⚡</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">Rotation scheduling</div></td>
+          <td class="none">❌</td><td class="full">✅</td><td class="full">✅</td><td class="none">❌</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">Escalation policy for on-call</div></td>
+          <td class="none">❌</td><td class="full">✅</td><td class="full">✅</td><td class="none">❌</td>
+        </tr>
+
+        <!-- NOTIFICATIONS -->
+        <tr class="section-row"><td colspan="5"><div class="section-label">🔔 Notifications</div></td></tr>
+        <tr>
+          <td><div class="feature-name">In-app notification bell</div></td>
+          <td class="full">✅ 8 event types</td><td class="full">✅</td><td class="full">✅</td><td class="full">✅</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">Email notifications</div></td>
+          <td class="none">❌ not built yet</td><td class="full">✅</td><td class="full">✅</td><td class="full">✅</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">SMS / push / voice alerts</div></td>
+          <td class="none">❌</td><td class="full">✅</td><td class="full">✅</td><td class="full">✅</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">Configurable notification rules</div></td>
+          <td class="none">❌ hardcoded</td><td class="full">✅ fully custom</td><td class="full">✅</td><td class="full">✅</td>
+        </tr>
+
+        <!-- ANALYTICS -->
+        <tr class="section-row"><td colspan="5"><div class="section-label">📊 Analytics & Reporting</div></td></tr>
+        <tr>
+          <td><div class="feature-name">Real-time dashboard</div></td>
+          <td class="full">✅ role-scoped</td><td class="full">✅</td><td class="full">✅</td><td class="full">✅</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">Tickets by priority / status / type / category</div></td>
+          <td class="full">✅</td><td class="full">✅</td><td class="full">✅</td><td class="full">✅</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">Average resolution time</div></td>
+          <td class="full">✅ 30-day rolling</td><td class="full">✅ full history</td><td class="full">✅</td><td class="full">✅</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">SLA compliance reporting</div></td>
+          <td class="partial">⚡ basic counts</td><td class="full">✅ full drill-down</td><td class="full">✅</td><td class="full">✅</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">Agent performance reports</div></td>
+          <td class="none">❌</td><td class="full">✅</td><td class="full">✅</td><td class="full">✅</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">Custom reports / scheduled exports</div></td>
+          <td class="none">❌</td><td class="full">✅</td><td class="full">✅</td><td class="full">✅</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">AI trend analysis & predictions</div></td>
+          <td class="none">❌</td><td class="full">✅ 🤖</td><td class="full">✅ 🤖</td><td class="partial">⚡ 🤖</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">Time tracking / time entries</div></td>
+          <td class="partial">⚡ schema only</td><td class="full">✅</td><td class="full">✅</td><td class="partial">⚡</td>
+        </tr>
+
+        <!-- ASSET / CMDB -->
+        <tr class="section-row"><td colspan="5"><div class="section-label">🗄 Asset Management & CMDB</div></td></tr>
+        <tr>
+          <td><div class="feature-name">Asset inventory tracking</div></td>
+          <td class="none">❌</td><td class="full">✅</td><td class="full">✅</td><td class="none">❌</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">CMDB (Configuration Management DB)</div></td>
+          <td class="none">❌</td><td class="full">✅ Core feature</td><td class="full">✅</td><td class="none">❌</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">Link assets to tickets</div></td>
+          <td class="none">❌</td><td class="full">✅</td><td class="full">✅</td><td class="none">❌</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">Network auto-discovery</div></td>
+          <td class="none">❌</td><td class="full">✅</td><td class="full">✅</td><td class="none">❌</td>
+        </tr>
+
+        <!-- AUTOMATION / AI -->
+        <tr class="section-row"><td colspan="5"><div class="section-label">🤖 Automation & AI</div></td></tr>
+        <tr>
+          <td><div class="feature-name">Auto-advance ticket status on comment</div></td>
+          <td class="full">✅ New → In Progress</td><td class="full">✅</td><td class="full">✅</td><td class="full">✅</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">P1 auto-assignment to on-call</div></td>
+          <td class="full">✅</td><td class="full">✅</td><td class="full">✅</td><td class="partial">⚡</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">SLA auto-escalation (cron-based)</div></td>
+          <td class="full">✅</td><td class="full">✅</td><td class="full">✅</td><td class="partial">⚡</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">No-code workflow builder</div></td>
+          <td class="none">❌</td><td class="full">✅ Flow Designer</td><td class="full">✅ Automation Rules</td><td class="full">✅ Action Builder</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">AI ticket classification & routing</div></td>
+          <td class="none">❌</td><td class="full">✅ 🤖</td><td class="full">✅ 🤖</td><td class="full">✅ 🤖</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">AI-suggested resolutions / KB articles</div></td>
+          <td class="none">❌</td><td class="full">✅ 🤖 Agent Assist</td><td class="full">✅ 🤖</td><td class="full">✅ 🤖 Copilot</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">AI chatbot / virtual agent</div></td>
+          <td class="none">❌</td><td class="full">✅ 🤖 Now Assist</td><td class="full">✅ 🤖</td><td class="full">✅ 🤖</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">Generative AI (ticket summaries, responses)</div></td>
+          <td class="none">❌</td><td class="full">✅ 🤖</td><td class="full">✅ 🤖</td><td class="full">✅ 🤖</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">Alert noise reduction / grouping</div></td>
+          <td class="none">❌</td><td class="full">✅ 🤖</td><td class="full">✅ 🤖 ~60-70% reduction</td><td class="partial">⚡ 🤖</td>
+        </tr>
+
+        <!-- USER MANAGEMENT -->
+        <tr class="section-row"><td colspan="5"><div class="section-label">👤 User & Access Management</div></td></tr>
+        <tr>
+          <td><div class="feature-name">Role-based access control (RBAC)</div></td>
+          <td class="full">✅ 7 roles</td><td class="full">✅ Enterprise-grade</td><td class="full">✅</td><td class="full">✅</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">User management UI</div></td>
+          <td class="full">✅</td><td class="full">✅</td><td class="full">✅</td><td class="full">✅</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">SSO / OAuth / SAML</div></td>
+          <td class="none">❌</td><td class="full">✅</td><td class="full">✅</td><td class="full">✅</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">Department / team hierarchy</div></td>
+          <td class="partial">⚡ department field</td><td class="full">✅ full hierarchy</td><td class="full">✅</td><td class="full">✅</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">Skills-based routing</div></td>
+          <td class="partial">⚡ skills stored, not used</td><td class="full">✅</td><td class="full">✅</td><td class="full">✅</td>
+        </tr>
+
+        <!-- INTEGRATIONS -->
+        <tr class="section-row"><td colspan="5"><div class="section-label">🔗 Integrations</div></td></tr>
+        <tr>
+          <td><div class="feature-name">REST API</div></td>
+          <td class="full">✅</td><td class="full">✅</td><td class="full">✅</td><td class="full">✅</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">Slack / Teams integration</div></td>
+          <td class="none">❌</td><td class="full">✅</td><td class="full">✅</td><td class="full">✅</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">Monitoring tools (Grafana, PagerDuty, etc.)</div></td>
+          <td class="none">❌</td><td class="full">✅</td><td class="full">✅</td><td class="full">✅</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">App marketplace / plugins</div></td>
+          <td class="none">❌</td><td class="full">✅ thousands</td><td class="full">✅ 8,000+ apps</td><td class="full">✅ 1,000+ apps</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">Mobile app</div></td>
+          <td class="none">❌</td><td class="partial">⚡ limited</td><td class="full">✅</td><td class="full">✅</td>
+        </tr>
+
+        <!-- COMPLIANCE -->
+        <tr class="section-row"><td colspan="5"><div class="section-label">🔒 Compliance & Security</div></td></tr>
+        <tr>
+          <td><div class="feature-name">Audit log / activity history</div></td>
+          <td class="none">❌</td><td class="full">✅</td><td class="full">✅</td><td class="full">✅</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">SOC 2 / ISO 27001 / HIPAA</div></td>
+          <td class="none">❌ self-hosted</td><td class="full">✅</td><td class="full">✅</td><td class="full">✅</td>
+        </tr>
+        <tr>
+          <td><div class="feature-name">Data encryption at rest</div></td>
+          <td class="partial">⚡ depends on DB host</td><td class="full">✅</td><td class="full">✅</td><td class="full">✅</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════════ TAB 3: STRENGTHS & GAPS ═══════════════════ -->
+<div id="tab-strengths" class="tab-content">
+  <h2>Dispatchly — Strengths vs. Gaps</h2>
+  <p class="desc">An honest audit of where Dispatchly competes well and where the big platforms pull ahead</p>
+
+  <div class="two-col">
+    <div class="card" style="border-color:#22c55e44;">
+      <div class="card-title" style="color:#86efac;">✅ What Dispatchly Does Well</div>
+      <div class="item-list">
+        <div class="item"><div class="item-dot dot-green"></div><span><strong style="color:#e2e8f0;">Full ITSM core triangle</strong> — Incidents, SLA monitoring, and escalation are solid. Matches what most teams use day-to-day in Jira/Zendesk.</span></div>
+        <div class="item"><div class="item-dot dot-green"></div><span><strong style="color:#e2e8f0;">ITIL-aligned Problem &amp; Change Management</strong> — Both modules are more complete than Zendesk's out-of-the-box ITSM, which doesn't natively support Problem/Change.</span></div>
+        <div class="item"><div class="item-dot dot-green"></div><span><strong style="color:#e2e8f0;">Role-based visibility done right</strong> — 7 granular roles with scoped ticket visibility, requester self-service isolation, and technician accept/decline flow. More nuanced than basic Zendesk RBAC.</span></div>
+        <div class="item"><div class="item-dot dot-green"></div><span><strong style="color:#e2e8f0;">SLA auto-escalation</strong> — Background cron that auto-escalates on breach with dedup via <code>sla_alerts</code>. Feature parity with Jira SM on this specific flow.</span></div>
+        <div class="item"><div class="item-dot dot-green"></div><span><strong style="color:#e2e8f0;">P1 on-call auto-assignment</strong> — Automatically pages and assigns the on-call tech when a P1 ticket lands. Matches core PagerDuty-style paging logic.</span></div>
+        <div class="item"><div class="item-dot dot-green"></div><span><strong style="color:#e2e8f0;">Ticket → KB conversion</strong> — Resolved tickets can be published directly as KB articles. Feature present in all major platforms but often overlooked in smaller tools.</span></div>
+        <div class="item"><div class="item-dot dot-green"></div><span><strong style="color:#e2e8f0;">Problem → bulk ticket resolution</strong> — When a problem is resolved, all linked tickets auto-resolve and their requesters are notified. Jira SM does this; Zendesk doesn't natively.</span></div>
+        <div class="item"><div class="item-dot dot-green"></div><span><strong style="color:#e2e8f0;">Service catalog with approval flows</strong> — Catalog items can require approval before creating a ticket, with status "Pending Approval". On par with Jira SM's basic catalog.</span></div>
+        <div class="item"><div class="item-dot dot-green"></div><span><strong style="color:#e2e8f0;">Clean, custom codebase</strong> — No licensing fees, no per-seat costs, full control of data and customization. This is the core competitive advantage vs. $20k+/yr ServiceNow.</span></div>
+      </div>
+    </div>
+
+    <div class="card" style="border-color:#f8717144;">
+      <div class="card-title" style="color:#fca5a5;">❌ Critical Gaps vs. Enterprise Platforms</div>
+      <div class="item-list">
+        <div class="item"><div class="item-dot dot-red"></div><span><strong style="color:#e2e8f0;">No AI / ML anywhere</strong> — No auto-triage, no suggested KB articles during ticket creation, no generative summaries. All three competitors ship AI as table stakes in 2026.</span></div>
+        <div class="item"><div class="item-dot dot-red"></div><span><strong style="color:#e2e8f0;">No email notifications</strong> — Notifications exist only inside the app bell. No outbound emails for status updates, assignments, or SLA alerts — a major gap for any real helpdesk.</span></div>
+        <div class="item"><div class="item-dot dot-red"></div><span><strong style="color:#e2e8f0;">No asset management / CMDB</strong> — Can't track IT assets or link them to tickets. ServiceNow and Jira SM treat this as a first-class module. Critical for enterprise IT.</span></div>
+        <div class="item"><div class="item-dot dot-red"></div><span><strong style="color:#e2e8f0;">No business-hours SLA</strong> — SLA clock runs 24/7 including weekends. All competitors support business-hour schedules (SLA pauses off-hours). This inflates breach rates unfairly.</span></div>
+        <div class="item"><div class="item-dot dot-red"></div><span><strong style="color:#e2e8f0;">No workflow automation builder</strong> — Every trigger (notifications, status transitions) is hardcoded. ServiceNow Flow Designer, Jira Automation, and Zendesk Action Builder let admins build rules without code.</span></div>
+        <div class="item"><div class="item-dot dot-red"></div><span><strong style="color:#e2e8f0;">No SSO / OAuth / SAML</strong> — Email + password only. Enterprise IT teams require SSO (Okta, Azure AD, Google Workspace). Blocks adoption in mid/large orgs.</span></div>
+        <div class="item"><div class="item-dot dot-red"></div><span><strong style="color:#e2e8f0;">No audit trail</strong> — No timestamped log of who changed what. Compliance-heavy industries (healthcare, finance) legally require this.</span></div>
+        <div class="item"><div class="item-dot dot-red"></div><span><strong style="color:#e2e8f0;">No advanced analytics</strong> — Only a basic dashboard. No agent performance tracking, no exportable reports, no SLA compliance trends over time.</span></div>
+        <div class="item"><div class="item-dot dot-red"></div><span><strong style="color:#e2e8f0;">Skills not used for routing</strong> — Skills are stored on users but never used for auto-routing or availability matching. Jira SM and ServiceNow use skills + availability to pick the right agent.</span></div>
+        <div class="item"><div class="item-dot dot-red"></div><span><strong style="color:#e2e8f0;">No mobile app or omnichannel</strong> — No native mobile, no chat widget, no phone/SMS integration. Real helpdesks need agents on mobile for on-call responses.</span></div>
+        <div class="item"><div class="item-dot dot-red"></div><span><strong style="color:#e2e8f0;">Time tracking not surfaced in UI</strong> — The <code>time_entries</code> table exists in the DB (migration 015) but there's no frontend page or workflow built around it.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="border-color:#6366f144; margin-top: 4px;">
+    <div class="card-title" style="color:#a5b4fc;">⚡ Where Dispatchly Unexpectedly Beats Zendesk</div>
+    <div style="display:flex; flex-wrap:wrap; gap:10px;">
+      <div class="item" style="min-width:260px;"><div class="item-dot dot-blue"></div><span>Full Problem Management (root cause, workaround, bulk resolve) — Zendesk doesn't have this natively</span></div>
+      <div class="item" style="min-width:260px;"><div class="item-dot dot-blue"></div><span>Full Change Management with approval workflow — Zendesk has no change module</span></div>
+      <div class="item" style="min-width:260px;"><div class="item-dot dot-blue"></div><span>Technician accept/decline flow — Zendesk has no such handshake</span></div>
+      <div class="item" style="min-width:260px;"><div class="item-dot dot-blue"></div><span>P1 auto-assign to on-call — Zendesk requires third-party paging tools</span></div>
+      <div class="item" style="min-width:260px;"><div class="item-dot dot-blue"></div><span>Zero cost — Zendesk charges ~$55–$115/agent/mo</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ TAB 4: ROADMAP ═══════════════════ -->
+<div id="tab-roadmap" class="tab-content">
+  <h2>What to Build Next</h2>
+  <p class="desc">Prioritized features to close the gap with enterprise platforms — ranked by impact vs. effort</p>
+
+  <h3 style="margin-bottom:16px;">🔥 High Impact · Low Effort (Build First)</h3>
+  <div class="roadmap-grid" style="margin-bottom:24px;">
+    <div class="roadmap-card">
+      <div class="roadmap-title">📧 Email Notifications</div>
+      <div class="roadmap-sub">Critical gap — currently notifications are in-app only</div>
+      <div class="badge badge-easy">Easy</div>
+      <div style="font-size:11px;color:#64748b;margin-top:8px;line-height:1.6;">Use Nodemailer or SendGrid. Hook into existing <code>notifyUser()</code> — just add an email send alongside the DB insert. ~1–2 days work.</div>
+    </div>
+    <div class="roadmap-card">
+      <div class="roadmap-title">⏰ Business-Hours SLA</div>
+      <div class="roadmap-sub">SLA clock runs 24/7 — unfair to agents on nights/weekends</div>
+      <div class="badge badge-easy">Easy</div>
+      <div style="font-size:11px;color:#64748b;margin-top:8px;line-height:1.6;">Modify <code>computeSla()</code> to subtract non-business minutes. Add a schedule config (business hours per day). ~1 day.</div>
+    </div>
+    <div class="roadmap-card">
+      <div class="roadmap-title">📈 Time Tracking UI</div>
+      <div class="roadmap-sub">DB table (time_entries) already exists — just needs a frontend</div>
+      <div class="badge badge-easy">Easy</div>
+      <div style="font-size:11px;color:#64748b;margin-top:8px;line-height:1.6;">Add a "Log Time" button on TicketDetailPage. Show total time per ticket on the detail view. Routes and DB already there. ~1 day.</div>
+    </div>
+    <div class="roadmap-card">
+      <div class="roadmap-title">🛠 Audit Log</div>
+      <div class="roadmap-sub">Who changed what and when — required for compliance</div>
+      <div class="badge badge-easy">Easy</div>
+      <div style="font-size:11px;color:#64748b;margin-top:8px;line-height:1.6;">New <code>audit_log</code> table. Hook into PATCH /tickets/:id, updateProblem, updateChange to INSERT before/after snapshots. ~1–2 days.</div>
+    </div>
+    <div class="roadmap-card">
+      <div class="roadmap-title">🔍 Skills-Based Auto-Routing</div>
+      <div class="roadmap-sub">Skills already stored — route tickets to best-matched agent</div>
+      <div class="badge badge-easy">Easy</div>
+      <div style="font-size:11px;color:#64748b;margin-top:8px;line-height:1.6;">Match ticket category → agent skills array. Auto-suggest assignment when a ticket is created or escalated. Pure backend logic, ~1 day.</div>
+    </div>
+    <div class="roadmap-card">
+      <div class="roadmap-title">📊 SLA Compliance Report</div>
+      <div class="roadmap-sub">Time-based SLA trend — which priority breaches most?</div>
+      <div class="badge badge-easy">Easy</div>
+      <div style="font-size:11px;color:#64748b;margin-top:8px;line-height:1.6;">Extend /api/dashboard with a 30/60/90-day SLA compliance breakdown by priority. Add a chart in DashboardPage. ~1 day.</div>
+    </div>
+  </div>
+
+  <h3 style="margin-bottom:16px;">🚀 High Impact · Medium Effort (Build Next)</h3>
+  <div class="roadmap-grid" style="margin-bottom:24px;">
+    <div class="roadmap-card">
+      <div class="roadmap-title">🤖 AI Ticket Triage</div>
+      <div class="roadmap-sub">Auto-classify category + priority from ticket title/body</div>
+      <div class="badge badge-medium">Medium</div>
+      <div style="font-size:11px;color:#64748b;margin-top:8px;line-height:1.6;">Call OpenAI/Claude API on ticket creation. Suggest category, priority, and a matching KB article. Show suggestions — agent confirms. ~3–5 days.</div>
+    </div>
+    <div class="roadmap-card">
+      <div class="roadmap-title">📱 Custom Notification Rules</div>
+      <div class="roadmap-sub">Let admins configure who gets notified for what events</div>
+      <div class="badge badge-medium">Medium</div>
+      <div style="font-size:11px;color:#64748b;margin-top:8px;line-height:1.6;">New <code>notification_rules</code> table. UI in admin panel. Replace hardcoded recipient logic in controllers with rule lookups. ~3–5 days.</div>
+    </div>
+    <div class="roadmap-card">
+      <div class="roadmap-title">📋 Change Calendar View</div>
+      <div class="roadmap-sub">Visual calendar of upcoming maintenance windows</div>
+      <div class="badge badge-medium">Medium</div>
+      <div style="font-size:11px;color:#64748b;margin-top:8px;line-height:1.6;">Add a calendar component (FullCalendar.js) to ChangesPage. Plot maintenance_window_start/end for approved changes. ~2–3 days.</div>
+    </div>
+    <div class="roadmap-card">
+      <div class="roadmap-title">🔐 SSO Integration</div>
+      <div class="roadmap-sub">Google / Microsoft / Okta sign-in for enterprise orgs</div>
+      <div class="badge badge-medium">Medium</div>
+      <div style="font-size:11px;color:#64748b;margin-top:8px;line-height:1.6;">Add Passport.js with Google OAuth / SAML 2.0 strategy. Issue same JWT on success. Blocks enterprise adoption without this. ~3–5 days.</div>
+    </div>
+    <div class="roadmap-card">
+      <div class="roadmap-title">📊 Agent Performance Dashboard</div>
+      <div class="roadmap-sub">Tickets closed, avg resolution time, SLA score per agent</div>
+      <div class="badge badge-medium">Medium</div>
+      <div style="font-size:11px;color:#64748b;margin-top:8px;line-height:1.6;">New /api/reports/agents endpoint. Aggregate from tickets table grouped by assigned_to_user_id. Add manager-only view. ~2–3 days.</div>
+    </div>
+    <div class="roadmap-card">
+      <div class="roadmap-title">🗄 Asset Management (Basic)</div>
+      <div class="roadmap-sub">Track IT assets and link them to tickets</div>
+      <div class="badge badge-medium">Medium</div>
+      <div style="font-size:11px;color:#64748b;margin-top:8px;line-height:1.6;">New <code>assets</code> table (name, type, serial, owner, status). Link to tickets via <code>ticket_assets</code>. New /assets routes + AssetsPage. ~5–7 days.</div>
+    </div>
+  </div>
+
+  <h3 style="margin-bottom:16px;">🏔 Game-Changers · High Effort</h3>
+  <div class="roadmap-grid">
+    <div class="roadmap-card">
+      <div class="roadmap-title">🤖 AI Virtual Agent / Chatbot</div>
+      <div class="roadmap-sub">Self-service portal with AI that deflects common requests</div>
+      <div class="badge badge-hard">Hard</div>
+      <div style="font-size:11px;color:#64748b;margin-top:8px;line-height:1.6;">Chat widget powered by LLM + KB retrieval (RAG). Deflects ~30–40% of tickets before they're created. Major differentiator if built well.</div>
+    </div>
+    <div class="roadmap-card">
+      <div class="roadmap-title">📱 Mobile App</div>
+      <div class="roadmap-sub">React Native app for agents responding on-call</div>
+      <div class="badge badge-hard">Hard</div>
+      <div style="font-size:11px;color:#64748b;margin-top:8px;line-height:1.6;">Critical for on-call workflows. Push notifications for P1 alerts. Accept/decline assignment from phone. Backend API is already mobile-ready.</div>
+    </div>
+    <div class="roadmap-card">
+      <div class="roadmap-title">🔗 Slack / Teams Integration</div>
+      <div class="roadmap-sub">Create, update, and get notified on tickets via Slack</div>
+      <div class="badge badge-hard">Hard</div>
+      <div style="font-size:11px;color:#64748b;margin-top:8px;line-height:1.6;">Slack bot that posts P1/SLA alerts to channels. Allow ticket actions via Slack slash commands. Major workflow improvement for DevOps teams.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ TAB 5: POSITIONING ═══════════════════ -->
+<div id="tab-positioning" class="tab-content">
+  <h2>Market Positioning</h2>
+  <p class="desc">Where each platform is designed to live, and where Dispatchly fits in that landscape</p>
+
+  <div class="positioning-grid" style="margin-bottom:20px;">
+    <div class="pos-card" style="border-color:#22c55e44; background:#14532d11;">
+      <div class="score-name" style="color:#86efac;font-size:14px;">🟢 ServiceNow ITSM</div>
+      <div class="item-list">
+        <div class="item"><div class="item-dot dot-green"></div><span><strong style="color:#e2e8f0;">Target:</strong> Large enterprises (1,000+ employees), complex cross-functional IT orgs</span></div>
+        <div class="item"><div class="item-dot dot-green"></div><span><strong style="color:#e2e8f0;">Strengths:</strong> Most comprehensive platform on earth. AI-first (post-Moveworks acquisition). CMDB as the single source of truth. Unmatched workflow automation.</span></div>
+        <div class="item"><div class="item-dot dot-red"></div><span><strong style="color:#e2e8f0;">Weaknesses:</strong> Extremely expensive ($10k–$20k+/yr, scaling 3x with growth). Months-long implementation. Requires dedicated ServiceNow admins/developers.</span></div>
+        <div class="item"><div class="item-dot" style="background:#fbbf24"></div><span><strong style="color:#e2e8f0;">Pricing:</strong> Custom quotes — no public pricing. Foundation → Advanced → Prime tiers. AI add-ons sold separately.</span></div>
+      </div>
+    </div>
+
+    <div class="pos-card" style="border-color:#6366f144; background:#1e3a8a11;">
+      <div class="score-name" style="color:#a5b4fc;font-size:14px;">🔵 Jira Service Management</div>
+      <div class="item-list">
+        <div class="item"><div class="item-dot dot-blue"></div><span><strong style="color:#e2e8f0;">Target:</strong> SMBs to mid-market with engineering/DevOps teams already on Atlassian ecosystem</span></div>
+        <div class="item"><div class="item-dot dot-blue"></div><span><strong style="color:#e2e8f0;">Strengths:</strong> Best value for dev-centric ITSM. Deep Jira/Confluence/Bitbucket integration. 8,000+ marketplace apps. CI/CD-native change management.</span></div>
+        <div class="item"><div class="item-dot dot-red"></div><span><strong style="color:#e2e8f0;">Weaknesses:</strong> Problem/Change/Major Incident moved to Premium plan (Oct 2024). Can get expensive at scale. UI complexity intimidates non-technical users.</span></div>
+        <div class="item"><div class="item-dot" style="background:#fbbf24"></div><span><strong style="color:#e2e8f0;">Pricing:</strong> ~$20/agent/mo (Standard) · ~$45–$60/agent/mo (Premium). Free tier: up to 3 agents.</span></div>
+      </div>
+    </div>
+
+    <div class="pos-card" style="border-color:#f59e0b44; background:#71400011;">
+      <div class="score-name" style="color:#fde68a;font-size:14px;">🟡 Zendesk</div>
+      <div class="item-list">
+        <div class="item"><div class="item-dot dot-yellow"></div><span><strong style="color:#e2e8f0;">Target:</strong> Customer-facing support teams (CX-first). SMB to mid-market. Less ITSM depth.</span></div>
+        <div class="item"><div class="item-dot dot-yellow"></div><span><strong style="color:#e2e8f0;">Strengths:</strong> Best omnichannel (email, chat, voice, social). Strong AI Copilot for agents. Fastest time-to-value. Great for customer service orgs.</span></div>
+        <div class="item"><div class="item-dot dot-red"></div><span><strong style="color:#e2e8f0;">Weaknesses:</strong> Lacks native ITIL Problem/Change Management. CMDB = essentially absent. Not ideal for internal IT helpdesk teams wanting ITSM depth.</span></div>
+        <div class="item"><div class="item-dot" style="background:#fbbf24"></div><span><strong style="color:#e2e8f0;">Pricing:</strong> ~$55/agent/mo (Suite Team) · ~$115/agent/mo (Suite Professional)</span></div>
+      </div>
+    </div>
+
+    <div class="pos-card" style="border-color:#3b82f644; background:#1e3a5f22;">
+      <div class="score-name" style="color:#93c5fd;font-size:14px;">⚡ Dispatchly (Ours)</div>
+      <div class="item-list">
+        <div class="item"><div class="item-dot dot-blue"></div><span><strong style="color:#e2e8f0;">Target:</strong> Small-to-mid IT teams, healthcare/clinical environments, organizations needing custom ITSM without SaaS lock-in or per-seat costs</span></div>
+        <div class="item"><div class="item-dot dot-green"></div><span><strong style="color:#e2e8f0;">Unique strengths:</strong> Zero licensing cost. Full data ownership. Custom-built role model (7 roles, REQUESTER vs STAFF split). Complete Incident + Problem + Change + Catalog in one codebase.</span></div>
+        <div class="item"><div class="item-dot dot-blue"></div><span><strong style="color:#e2e8f0;">Sweet spot:</strong> Orgs that can't afford ServiceNow, don't want Jira's Atlassian ecosystem lock-in, and need more ITSM depth than Zendesk provides — but have dev resources to run and extend the system.</span></div>
+        <div class="item"><div class="item-dot" style="background:#4ade80"></div><span><strong style="color:#e2e8f0;">Pricing:</strong> Self-hosted = hosting cost only. No per-seat fees. At 20 agents, you save $10,000–$20,000/yr vs. Jira SM Premium, and $100k+/yr vs. ServiceNow.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- The one-liner -->
+  <div style="background:#1e293b;border:1px solid #3b82f644;border-radius:12px;padding:20px;">
+    <div style="font-size:13px;font-weight:700;color:#93c5fd;margin-bottom:10px;">⚡ Dispatchly's Positioning in One Sentence</div>
+    <div style="font-size:14px;color:#e2e8f0;line-height:1.7;">
+      Dispatchly is an <strong>open, self-hosted ITSM platform</strong> that covers the full ITIL core (Incident → Problem → Change → Catalog → KB) with <strong>zero licensing cost</strong>, making it the right choice for organizations that want enterprise-grade workflows without enterprise pricing — and have the engineering capacity to own their tooling.
+    </div>
+    <div class="divider"></div>
+    <div style="font-size:12px;color:#64748b;line-height:1.7;">
+      <strong style="color:#94a3b8;">The gap to close in 2026:</strong> Adding email notifications, business-hours SLA, SSO, and basic AI triage would push Dispatchly from "solid internal tool" to "credible alternative to Jira SM Standard" for teams under 100 agents. These are all 1–5 day engineering tasks — the architecture already supports them.
+    </div>
+  </div>
+</div>
+
+<script>
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  event.currentTarget.classList.add('active');
+}
+</script>
+</body>
+</html>

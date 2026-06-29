@@ -1,0 +1,1018 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dispatchly — Full System Diagram</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f1117; color: #e2e8f0; min-height: 100vh; }
+
+  /* ── Tabs ── */
+  .tabs { display: flex; gap: 2px; padding: 16px 20px 0; background: #0f1117; border-bottom: 1px solid #1e2535; position: sticky; top: 0; z-index: 100; }
+  .tab { padding: 10px 20px; border-radius: 8px 8px 0 0; cursor: pointer; font-size: 13px; font-weight: 600; color: #64748b; background: #161b27; border: 1px solid #1e2535; border-bottom: none; transition: all .15s; }
+  .tab:hover { color: #94a3b8; background: #1a2235; }
+  .tab.active { color: #e2e8f0; background: #1e293b; border-color: #334155; }
+  .tab-content { display: none; padding: 24px; }
+  .tab-content.active { display: block; }
+
+  /* ── Section headings ── */
+  h2 { font-size: 18px; font-weight: 700; color: #f1f5f9; margin-bottom: 6px; }
+  h3 { font-size: 13px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 12px; }
+  .subtitle { font-size: 13px; color: #64748b; margin-bottom: 24px; }
+
+  /* ── Cards ── */
+  .card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 16px; }
+  .card-sm { background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 12px; }
+
+  /* ── Badges ── */
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 11px; font-weight: 600; }
+  .badge-red    { background: #7f1d1d; color: #fca5a5; }
+  .badge-orange { background: #7c2d12; color: #fdba74; }
+  .badge-yellow { background: #713f12; color: #fde047; }
+  .badge-green  { background: #14532d; color: #86efac; }
+  .badge-blue   { background: #1e3a5f; color: #93c5fd; }
+  .badge-purple { background: #3b0764; color: #d8b4fe; }
+  .badge-teal   { background: #134e4a; color: #5eead4; }
+  .badge-gray   { background: #1e293b; color: #94a3b8; border: 1px solid #334155; }
+
+  /* ── Grids ── */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .grid-auto { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+
+  /* ── Architecture ── */
+  .arch-layer { margin-bottom: 20px; }
+  .arch-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: #475569; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+  .arch-label::after { content: ''; flex: 1; height: 1px; background: #1e293b; }
+  .arch-nodes { display: flex; flex-wrap: wrap; gap: 8px; }
+  .node { display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all .15s; border: 1px solid transparent; }
+  .node:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,.4); }
+  .node-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+  .node-frontend  { background: #1e3a5f33; border-color: #2563eb44; color: #93c5fd; }
+  .node-frontend .node-dot { background: #3b82f6; }
+  .node-api       { background: #14532d33; border-color: #16a34a44; color: #86efac; }
+  .node-api .node-dot { background: #22c55e; }
+  .node-service   { background: #3b076433; border-color: #9333ea44; color: #d8b4fe; }
+  .node-service .node-dot { background: #a855f7; }
+  .node-db        { background: #7c2d1233; border-color: #ea580c44; color: #fdba74; }
+  .node-db .node-dot { background: #f97316; }
+  .node-bg        { background: #13343133; border-color: #0d948444; color: #5eead4; }
+  .node-bg .node-dot { background: #14b8a6; }
+
+  /* ── Role matrix ── */
+  .matrix-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th { padding: 10px 12px; text-align: left; font-weight: 700; color: #64748b; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; border-bottom: 2px solid #334155; white-space: nowrap; }
+  td { padding: 9px 12px; border-bottom: 1px solid #1e293b; vertical-align: middle; }
+  tr:hover td { background: #1e293b55; }
+  .check { color: #4ade80; font-size: 14px; }
+  .cross { color: #374151; font-size: 14px; }
+  .partial { color: #fbbf24; font-size: 14px; }
+
+  /* ── Flow diagrams ── */
+  .flow { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .flow-step { padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+  .flow-arrow { color: #475569; font-size: 16px; }
+  .flow-blue   { background: #1e3a5f; color: #93c5fd; }
+  .flow-green  { background: #14532d; color: #86efac; }
+  .flow-orange { background: #7c2d12; color: #fdba74; }
+  .flow-purple { background: #3b0764; color: #d8b4fe; }
+  .flow-teal   { background: #134e4a; color: #5eead4; }
+  .flow-red    { background: #7f1d1d; color: #fca5a5; }
+  .flow-gray   { background: #1e293b; color: #94a3b8; border: 1px solid #334155; }
+  .flow-yellow { background: #713f12; color: #fde047; }
+
+  /* ── DB Schema ── */
+  .db-table { border: 1px solid #334155; border-radius: 10px; overflow: hidden; margin-bottom: 16px; }
+  .db-table-header { background: #1e293b; padding: 10px 14px; font-size: 12px; font-weight: 700; color: #f1f5f9; display: flex; align-items: center; justify-content: space-between; }
+  .db-table-body { background: #0f1117; }
+  .db-col { display: flex; align-items: center; gap: 8px; padding: 7px 14px; border-top: 1px solid #1a2235; font-size: 11px; }
+  .db-col-name { font-weight: 600; color: #cbd5e1; min-width: 160px; }
+  .db-col-type { color: #64748b; font-family: 'SF Mono', 'Fira Code', monospace; }
+  .db-pk { color: #fbbf24; font-size: 10px; font-weight: 700; }
+  .db-fk { color: #a855f7; font-size: 10px; font-weight: 700; }
+
+  /* ── Notification types ── */
+  .notif-list { display: flex; flex-direction: column; gap: 6px; }
+  .notif-item { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: #0f1117; border-radius: 6px; font-size: 12px; }
+  .notif-icon { font-size: 16px; width: 24px; text-align: center; }
+  .notif-name { font-weight: 600; color: #e2e8f0; min-width: 140px; }
+  .notif-desc { color: #64748b; }
+
+  /* ── API endpoint list ── */
+  .ep { display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: #0f1117; border-radius: 6px; font-size: 11px; margin-bottom: 4px; font-family: 'SF Mono', 'Fira Code', monospace; }
+  .method { font-weight: 700; min-width: 42px; }
+  .method-get    { color: #4ade80; }
+  .method-post   { color: #60a5fa; }
+  .method-patch  { color: #fbbf24; }
+  .method-delete { color: #f87171; }
+  .ep-path { color: #94a3b8; }
+  .ep-desc { color: #475569; font-size: 10px; font-family: -apple-system, sans-serif; margin-left: auto; }
+
+  /* ── Misc ── */
+  .divider { height: 1px; background: #1e293b; margin: 20px 0; }
+  .pill-group { display: flex; flex-wrap: wrap; gap: 6px; }
+  .pill { padding: 3px 10px; border-radius: 99px; font-size: 11px; background: #1e293b; border: 1px solid #334155; color: #94a3b8; }
+  .section { margin-bottom: 28px; }
+  .info-row { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 8px; font-size: 12px; }
+  .info-label { color: #64748b; min-width: 120px; font-weight: 600; }
+  .info-val { color: #cbd5e1; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #64748b; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: #0f1117; }
+  ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<div style="padding:20px 24px 0; display:flex; align-items:center; justify-content:space-between;">
+  <div>
+    <div style="font-size:22px;font-weight:800;color:#f1f5f9;letter-spacing:-.5px;">⚡ Dispatchly</div>
+    <div style="font-size:13px;color:#64748b;margin-top:2px;">Full system diagram — architecture, user flows, roles, API, database</div>
+  </div>
+  <div class="pill-group">
+    <span class="pill">React + Vite</span>
+    <span class="pill">Node/Express</span>
+    <span class="pill">PostgreSQL</span>
+    <span class="pill">JWT Auth</span>
+  </div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('architecture')">🏗 Architecture</div>
+  <div class="tab" onclick="switchTab('flows')">🔄 User Flows</div>
+  <div class="tab" onclick="switchTab('roles')">👥 Roles & Access</div>
+  <div class="tab" onclick="switchTab('api')">📡 API Endpoints</div>
+  <div class="tab" onclick="switchTab('database')">🗄 Database</div>
+  <div class="tab" onclick="switchTab('features')">✨ Feature Map</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ TAB 1: ARCHITECTURE -->
+<div id="tab-architecture" class="tab-content active">
+  <h2>System Architecture</h2>
+  <p class="subtitle">Every layer of Dispatchly — frontend pages, API routes, background services, and the database</p>
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#3b82f6"></div> Frontend (React)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#22c55e"></div> API Layer (Express)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#a855f7"></div> Auth & Middleware</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#f97316"></div> Database (PostgreSQL)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#14b8a6"></div> Background Services</div>
+  </div>
+
+  <div class="arch-layer">
+    <div class="arch-label">👤 User Entry Points</div>
+    <div class="arch-nodes">
+      <div class="node node-frontend">🌐 Browser (React SPA)</div>
+      <div class="node node-bg">📧 IMAP Email (pollOnce every 2 min)</div>
+      <div class="node node-bg">🔗 Webhook POST /api/email/inbound</div>
+    </div>
+  </div>
+
+  <div class="arch-layer">
+    <div class="arch-label">🖥 Frontend Pages (React Router v6 — Loaders &amp; Actions)</div>
+    <div class="arch-nodes">
+      <div class="node node-frontend">🔑 /login</div>
+      <div class="node node-frontend">📊 / Dashboard</div>
+      <div class="node node-frontend">🎫 /tickets</div>
+      <div class="node node-frontend">🎫 /tickets/new</div>
+      <div class="node node-frontend">🎫 /tickets/:id</div>
+      <div class="node node-frontend">📋 /catalog</div>
+      <div class="node node-frontend">📚 /kb</div>
+      <div class="node node-frontend">📚 /kb/:id</div>
+      <div class="node node-frontend">🔍 /problems</div>
+      <div class="node node-frontend">🔍 /problems/:id</div>
+      <div class="node node-frontend">🔄 /changes</div>
+      <div class="node node-frontend">🔄 /changes/:id</div>
+      <div class="node node-frontend">📅 /admin/schedule</div>
+      <div class="node node-frontend">👤 /admin/users</div>
+    </div>
+  </div>
+
+  <div class="arch-layer">
+    <div class="arch-label">🔐 Auth Middleware (requireAuth + requireRole)</div>
+    <div class="arch-nodes">
+      <div class="node node-service">JWT Cookie (httpOnly, 24h)</div>
+      <div class="node node-service">requireAuth — validates JWT</div>
+      <div class="node node-service">requireRole(...roles) — guards endpoints</div>
+      <div class="node node-service">rootLoader — protects all React routes</div>
+      <div class="node node-service">RoleGate component — hides UI elements</div>
+    </div>
+  </div>
+
+  <div class="arch-layer">
+    <div class="arch-label">📡 Express API Routes (/api/*)</div>
+    <div class="arch-nodes">
+      <div class="node node-api">POST /auth/login · /logout · GET /auth/me</div>
+      <div class="node node-api">GET /tickets · POST · PATCH · escalate · comments · convert-to-kb · accept · decline</div>
+      <div class="node node-api">GET /kb · POST · PATCH · DELETE /kb/:id</div>
+      <div class="node node-api">GET /dashboard</div>
+      <div class="node node-api">GET /users · PATCH · POST /users/:id/toggle</div>
+      <div class="node node-api">GET /notifications · PATCH (mark read)</div>
+      <div class="node node-api">GET /catalog · POST /:id/submit</div>
+      <div class="node node-api">POST /email/inbound</div>
+      <div class="node node-api">GET /oncall · POST · DELETE · POST /page/:userId</div>
+      <div class="node node-api">GET /problems · POST · PATCH · link · unlink · resolve</div>
+      <div class="node node-api">GET /changes · POST · PATCH · submit · approve · reject · link</div>
+    </div>
+  </div>
+
+  <div class="arch-layer">
+    <div class="arch-label">⚙️ Background Services (run on server startup)</div>
+    <div class="arch-nodes">
+      <div class="node node-bg">⏱ SLA Monitor (cron every 5 min) — at-risk alerts, breach alerts, auto-escalate</div>
+      <div class="node node-bg">📬 Email Poller (cron every 2 min) — IMAP → create tickets from email</div>
+    </div>
+  </div>
+
+  <div class="arch-layer">
+    <div class="arch-label">🗄 PostgreSQL Database (17 migrations)</div>
+    <div class="arch-nodes">
+      <div class="node node-db">users</div>
+      <div class="node node-db">tickets</div>
+      <div class="node node-db">ticket_comments</div>
+      <div class="node node-db">escalations</div>
+      <div class="node node-db">kb_articles</div>
+      <div class="node node-db">kb_tags</div>
+      <div class="node node-db">notifications</div>
+      <div class="node node-db">sla_alerts</div>
+      <div class="node node-db">catalog_items</div>
+      <div class="node node-db">catalog_fields</div>
+      <div class="node node-db">approvals</div>
+      <div class="node node-db">oncall_schedules</div>
+      <div class="node node-db">time_entries</div>
+      <div class="node node-db">problems</div>
+      <div class="node node-db">problem_tickets</div>
+      <div class="node node-db">change_requests</div>
+      <div class="node node-db">change_approvals</div>
+      <div class="node node-db">change_tickets</div>
+    </div>
+  </div>
+
+  <!-- Key cross-cutting concerns -->
+  <div class="divider"></div>
+  <h3>Cross-Cutting Concerns</h3>
+  <div class="grid-3">
+    <div class="card-sm">
+      <div style="font-size:13px;font-weight:700;color:#f1f5f9;margin-bottom:8px;">🔔 Notification Engine</div>
+      <div style="font-size:12px;color:#64748b;line-height:1.6;">Every significant action (ticket created, status changed, assigned, escalated, SLA alert, approval needed) triggers an INSERT into <code style="color:#a855f7">notifications</code> table. The frontend bell polls and marks read.</div>
+    </div>
+    <div class="card-sm">
+      <div style="font-size:13px;font-weight:700;color:#f1f5f9;margin-bottom:8px;">⏱ SLA Engine</div>
+      <div style="font-size:12px;color:#64748b;line-height:1.6;">SLA minutes are set per priority (P1=60m, P2=240m, P3=480m, P4=4320m). <code style="color:#a855f7">computeSla()</code> calculates % elapsed. Cron checks every 5min — fires alerts and auto-escalates on breach.</div>
+    </div>
+    <div class="card-sm">
+      <div style="font-size:13px;font-weight:700;color:#f1f5f9;margin-bottom:8px;">🛡 Role-Based Access</div>
+      <div style="font-size:12px;color:#64748b;line-height:1.6;">7 roles: admin, manager, agent, technician, specialist, hr, client. REQUESTER_ROLES (hr, client) see only their own tickets. Technicians see only assigned tickets. Admin bypasses all role checks.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ TAB 2: FLOWS -->
+<div id="tab-flows" class="tab-content">
+  <h2>User Flows</h2>
+  <p class="subtitle">Step-by-step journeys through the app for each major feature</p>
+
+  <div class="section">
+    <h3>🔑 Authentication Flow</h3>
+    <div class="flow">
+      <div class="flow-step flow-gray">User visits any route</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step flow-blue">rootLoader: GET /api/auth/me</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step flow-red">401? Redirect → /login?from=...</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step flow-blue">LoginPage: POST /api/auth/login</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step flow-green">JWT set as httpOnly cookie (24h)</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step flow-teal">Redirect back to intended page</div>
+    </div>
+    <div class="flow">
+      <div class="flow-step flow-gray">Logout button in Layout</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step flow-blue">fetcher.submit → POST /api/auth/logout</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step flow-orange">Cookie cleared</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step flow-gray">Redirect → /login</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h3>🎫 Ticket Lifecycle</h3>
+    <div class="flow">
+      <div class="flow-step flow-blue">Create ticket (POST /api/tickets)</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step flow-green">Status: New · SLA starts</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step flow-teal">P1? Auto-assign to on-call → notify</div>
+    </div>
+    <div class="flow">
+      <div class="flow-step flow-green">Status: New</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step flow-blue">Staff adds comment</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step flow-yellow">Auto → In Progress</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step flow-orange">Escalated (manual or SLA breach)</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step flow-teal">Resolved</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step flow-gray">Closed</div>
+    </div>
+    <div class="flow">
+      <div class="flow-step flow-orange">Admin/Manager assigns technician</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step flow-yellow">assignment_status: pending_acceptance</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step flow-green">Technician accepts → accepted</div>
+      <div class="flow-arrow">OR</div>
+      <div class="flow-step flow-red">Technician declines → unassigned → managers notified</div>
+    </div>
+    <div class="flow">
+      <div class="flow-step flow-teal">Ticket Resolved</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step flow-purple">Convert to KB Article (admin/manager/agent/specialist)</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step flow-blue">Published in Knowledge Base</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h3>⏱ SLA Monitor Flow (background, every 5 min)</h3>
+    <div class="flow">
+      <div class="flow-step flow-teal">cron: every 5 min</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step flow-blue">Fetch all open tickets with sla_minutes</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step flow-blue">computeSla() → % elapsed</div>
+    </div>
+    <div class="flow">
+      <div class="flow-step flow-yellow">≥75% elapsed → At Risk alert (once)</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step flow-orange">Notify assigned tech + managers</div>
+    </div>
+    <div class="flow">
+      <div class="flow-step flow-red">&gt;100% elapsed → Breached alert (once)</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step flow-red">Auto-escalate ticket to Escalated</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step flow-orange">Notify tech + managers</div>
+    </div>
+    <div style="font-size:11px;color:#475569;margin-top:6px;">Dedup: sla_alerts table with UNIQUE (ticket_id, alert_type) — each alert fires at most once per ticket</div>
+  </div>
+
+  <div class="section">
+    <h3>📋 Service Catalog Flow</h3>
+    <div class="flow">
+      <div class="flow-step flow-blue">User browses /catalog</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step flow-blue">Selects catalog item (has dynamic fields)</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step flow-blue">Fills form → POST /api/catalog/:id/submit</div>
+    </div>
+    <div class="flow">
+      <div class="flow-step flow-yellow">requires_approval = false</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step flow-green">Ticket created (status: New)</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step flow-teal">Managers notified: new_ticket</div>
+    </div>
+    <div class="flow">
+      <div class="flow-step flow-orange">requires_approval = true</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step flow-yellow">Ticket status: Pending Approval</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step flow-purple">approvals row created</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step flow-orange">Managers notified: approval_needed</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h3>🔄 Change Management Flow</h3>
+    <div class="flow">
+      <div class="flow-step flow-gray">Draft</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step flow-blue">POST /changes/:id/submit</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step flow-yellow">Submitted · Managers notified</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step flow-green">Approved (manager/admin)</div>
+      <div class="flow-arrow">OR</div>
+      <div class="flow-step flow-red">Rejected → requester notified</div>
+    </div>
+    <div class="flow">
+      <div class="flow-step flow-green">Approved</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step flow-blue">In Progress → Completed / Cancelled</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step flow-teal">Link related tickets (change_tickets)</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h3>🔍 Problem Management Flow</h3>
+    <div class="flow">
+      <div class="flow-step flow-blue">Create Problem (admin/manager/agent)</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step flow-yellow">Link related tickets (problem_tickets)</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step flow-blue">Investigate → set root_cause + workaround</div>
+    </div>
+    <div class="flow">
+      <div class="flow-step flow-teal">POST /problems/:id/resolve</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step flow-green">All linked open tickets auto-resolved</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step flow-orange">Requesters notified for each ticket</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h3>📬 Email-to-Ticket Flow</h3>
+    <div class="grid-2">
+      <div class="card-sm">
+        <div style="font-size:12px;font-weight:700;color:#f1f5f9;margin-bottom:8px;">IMAP Polling (if EMAIL_IMAP_HOST set)</div>
+        <div class="flow" style="flex-direction:column;align-items:flex-start;">
+          <div class="flow-step flow-teal" style="margin-bottom:4px">cron: every 2 min</div>
+          <div class="flow-arrow" style="transform:rotate(90deg);margin:2px 16px">→</div>
+          <div class="flow-step flow-blue" style="margin-bottom:4px">Connect IMAP → search unseen</div>
+          <div class="flow-arrow" style="transform:rotate(90deg);margin:2px 16px">→</div>
+          <div class="flow-step flow-green" style="margin-bottom:4px">Parse email (mailparser)</div>
+          <div class="flow-arrow" style="transform:rotate(90deg);margin:2px 16px">→</div>
+          <div class="flow-step flow-purple" style="margin-bottom:4px">createTicketFromEmail()</div>
+          <div class="flow-arrow" style="transform:rotate(90deg);margin:2px 16px">→</div>
+          <div class="flow-step flow-green">Mark email \\Seen</div>
+        </div>
+      </div>
+      <div class="card-sm">
+        <div style="font-size:12px;font-weight:700;color:#f1f5f9;margin-bottom:8px;">Webhook (always available)</div>
+        <div class="flow" style="flex-direction:column;align-items:flex-start;">
+          <div class="flow-step flow-gray" style="margin-bottom:4px">Email service (SendGrid, Mailgun…)</div>
+          <div class="flow-arrow" style="transform:rotate(90deg);margin:2px 16px">→</div>
+          <div class="flow-step flow-blue" style="margin-bottom:4px">POST /api/email/inbound</div>
+          <div class="flow-arrow" style="transform:rotate(90deg);margin:2px 16px">→</div>
+          <div class="flow-step flow-green">createTicketFromEmail()</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h3>📅 On-Call &amp; P1 Auto-Assignment</h3>
+    <div class="flow">
+      <div class="flow-step flow-orange">Admin creates on-call schedule</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step flow-yellow">User.availability_status → on_call</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step flow-teal">User notified via notification</div>
+    </div>
+    <div class="flow">
+      <div class="flow-step flow-red">P1 ticket created</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step flow-blue">getCurrentOncallUser() → find active schedule</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step flow-orange">Auto-assign to on-call tech</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step flow-red">🚨 PAGE notification to tech + managers</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ TAB 3: ROLES -->
+<div id="tab-roles" class="tab-content">
+  <h2>Roles &amp; Access Matrix</h2>
+  <p class="subtitle">7 roles, each with different visibility and action permissions</p>
+
+  <div class="grid-auto" style="margin-bottom:24px;">
+    <div class="card-sm">
+      <div class="badge badge-red" style="margin-bottom:8px;">admin</div>
+      <div style="font-size:12px;color:#64748b;line-height:1.6;">Full access to everything. Bypasses all role checks. Manages users, schedules, approvals. Sees all tickets.</div>
+    </div>
+    <div class="card-sm">
+      <div class="badge badge-orange" style="margin-bottom:8px;">manager</div>
+      <div style="font-size:12px;color:#64748b;line-height:1.6;">Sees all tickets. Can assign, escalate, resolve. Approves changes. Manages on-call. Gets SLA + new ticket notifications.</div>
+    </div>
+    <div class="card-sm">
+      <div class="badge badge-blue" style="margin-bottom:8px;">agent</div>
+      <div style="font-size:12px;color:#64748b;line-height:1.6;">Sees all tickets. Can create, comment, escalate, resolve. Can convert tickets to KB articles.</div>
+    </div>
+    <div class="card-sm">
+      <div class="badge badge-purple" style="margin-bottom:8px;">technician</div>
+      <div style="font-size:12px;color:#64748b;line-height:1.6;">Sees only tickets assigned to them. Must accept/decline assignments. Can resolve. Gets SLA alerts for assigned tickets.</div>
+    </div>
+    <div class="card-sm">
+      <div class="badge badge-teal" style="margin-bottom:8px;">specialist</div>
+      <div style="font-size:12px;color:#64748b;line-height:1.6;">Sees all tickets. Can manage KB articles (create, edit, delete). Can resolve tickets.</div>
+    </div>
+    <div class="card-sm">
+      <div class="badge badge-yellow" style="margin-bottom:8px;">hr</div>
+      <div style="font-size:12px;color:#64748b;line-height:1.6;">Requester role. Can only see tickets they created. Priority fixed to P3. Cannot post internal comments.</div>
+    </div>
+    <div class="card-sm">
+      <div class="badge badge-gray" style="margin-bottom:8px;">client</div>
+      <div style="font-size:12px;color:#64748b;line-height:1.6;">Requester role. Same as HR. Can only see tickets they created. Priority fixed to P3.</div>
+    </div>
+  </div>
+
+  <div class="matrix-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Feature / Action</th>
+          <th><span class="badge badge-red">admin</span></th>
+          <th><span class="badge badge-orange">manager</span></th>
+          <th><span class="badge badge-blue">agent</span></th>
+          <th><span class="badge badge-purple">technician</span></th>
+          <th><span class="badge badge-teal">specialist</span></th>
+          <th><span class="badge badge-yellow">hr</span></th>
+          <th><span class="badge badge-gray">client</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td style="color:#94a3b8;font-weight:600;" colspan="8">Tickets</td></tr>
+        <tr><td>View all tickets</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td><td class="partial">assigned only</td><td class="check">✓</td><td class="partial">own only</td><td class="partial">own only</td></tr>
+        <tr><td>Create ticket</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td></tr>
+        <tr><td>Set priority (P1/P2/P4)</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td><td class="cross">✗ P3 only</td><td class="cross">✗ P3 only</td></tr>
+        <tr><td>Assign ticket to user</td><td class="check">✓</td><td class="check">✓</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td></tr>
+        <tr><td>Accept / decline assignment</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td><td class="check">✓</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td></tr>
+        <tr><td>Escalate ticket</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td></tr>
+        <tr><td>Resolve / close ticket</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td><td class="cross">✗</td><td class="cross">✗</td></tr>
+        <tr><td>Add public comment</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓ own</td><td class="check">✓ own</td></tr>
+        <tr><td>Add internal note</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td><td class="cross">✗</td><td class="cross">✗</td></tr>
+        <tr><td style="color:#94a3b8;font-weight:600;" colspan="8">Knowledge Base</td></tr>
+        <tr><td>Read KB articles</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td></tr>
+        <tr><td>Create / edit / delete KB</td><td class="check">✓</td><td class="check">✓</td><td class="cross">✗</td><td class="cross">✗</td><td class="check">✓</td><td class="cross">✗</td><td class="cross">✗</td></tr>
+        <tr><td>Convert ticket → KB</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td><td class="cross">✗</td><td class="check">✓</td><td class="cross">✗</td><td class="cross">✗</td></tr>
+        <tr><td style="color:#94a3b8;font-weight:600;" colspan="8">Service Catalog</td></tr>
+        <tr><td>Browse &amp; submit catalog items</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td></tr>
+        <tr><td>Manage catalog items (CRUD)</td><td class="check">✓</td><td class="check">✓</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td></tr>
+        <tr><td>Approve catalog requests</td><td class="check">✓</td><td class="check">✓</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td></tr>
+        <tr><td style="color:#94a3b8;font-weight:600;" colspan="8">Problems &amp; Changes</td></tr>
+        <tr><td>View problems / changes</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td><td class="cross">✗</td><td class="cross">✗</td></tr>
+        <tr><td>Create problems</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td></tr>
+        <tr><td>Create change requests</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td><td class="cross">✗</td><td class="cross">✗</td></tr>
+        <tr><td>Approve / reject changes</td><td class="check">✓</td><td class="check">✓</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td></tr>
+        <tr><td style="color:#94a3b8;font-weight:600;" colspan="8">Admin</td></tr>
+        <tr><td>User management</td><td class="check">✓</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td></tr>
+        <tr><td>On-call schedule</td><td class="check">✓</td><td class="check">✓</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td></tr>
+        <tr><td>Dashboard analytics</td><td class="check">all</td><td class="check">all</td><td class="check">all</td><td class="partial">assigned</td><td class="check">all</td><td class="partial">own</td><td class="partial">own</td></tr>
+        <tr><td>SLA notifications</td><td class="check">✓</td><td class="check">✓</td><td class="cross">✗</td><td class="check">assigned</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ TAB 4: API -->
+<div id="tab-api" class="tab-content">
+  <h2>API Endpoints</h2>
+  <p class="subtitle">All Express routes — method, path, and what they do</p>
+
+  <div class="grid-2">
+    <div>
+      <div class="section">
+        <h3>Auth  <span style="color:#475569;font-weight:400;text-transform:none;letter-spacing:0;">/api/auth</span></h3>
+        <div class="ep"><span class="method method-post">POST</span><span class="ep-path">/api/auth/login</span><span class="ep-desc">Email+password → JWT cookie</span></div>
+        <div class="ep"><span class="method method-post">POST</span><span class="ep-path">/api/auth/logout</span><span class="ep-desc">Clear cookie</span></div>
+        <div class="ep"><span class="method method-get">GET</span><span class="ep-path">/api/auth/me</span><span class="ep-desc">Return current user from token</span></div>
+      </div>
+
+      <div class="section">
+        <h3>Tickets  <span style="color:#475569;font-weight:400;text-transform:none;letter-spacing:0;">/api/tickets</span></h3>
+        <div class="ep"><span class="method method-get">GET</span><span class="ep-path">/api/tickets</span><span class="ep-desc">List (role-filtered) + pagination + search</span></div>
+        <div class="ep"><span class="method method-post">POST</span><span class="ep-path">/api/tickets</span><span class="ep-desc">Create ticket (P3 forced for requesters)</span></div>
+        <div class="ep"><span class="method method-get">GET</span><span class="ep-path">/api/tickets/:id</span><span class="ep-desc">Ticket + comments + escalations + KB link</span></div>
+        <div class="ep"><span class="method method-patch">PATCH</span><span class="ep-path">/api/tickets/:id</span><span class="ep-desc">Update status/priority/assignment/notes</span></div>
+        <div class="ep"><span class="method method-post">POST</span><span class="ep-path">/api/tickets/:id/escalate</span><span class="ep-desc">Add escalation + set status Escalated</span></div>
+        <div class="ep"><span class="method method-post">POST</span><span class="ep-path">/api/tickets/:id/comments</span><span class="ep-desc">Add public or internal comment</span></div>
+        <div class="ep"><span class="method method-post">POST</span><span class="ep-path">/api/tickets/:id/convert-to-kb</span><span class="ep-desc">Create KB article from resolved ticket</span></div>
+        <div class="ep"><span class="method method-post">POST</span><span class="ep-path">/api/tickets/:id/accept</span><span class="ep-desc">Technician accepts assignment</span></div>
+        <div class="ep"><span class="method method-post">POST</span><span class="ep-path">/api/tickets/:id/decline</span><span class="ep-desc">Technician declines + unassigns</span></div>
+        <div class="ep"><span class="method method-get">GET</span><span class="ep-path">/api/tickets/:id/problems</span><span class="ep-desc">Problems linked to this ticket</span></div>
+      </div>
+
+      <div class="section">
+        <h3>Knowledge Base  <span style="color:#475569;font-weight:400;text-transform:none;letter-spacing:0;">/api/kb</span></h3>
+        <div class="ep"><span class="method method-get">GET</span><span class="ep-path">/api/kb</span><span class="ep-desc">List published articles (search/filter/paginate)</span></div>
+        <div class="ep"><span class="method method-post">POST</span><span class="ep-path">/api/kb</span><span class="ep-desc">Create article (admin/manager/specialist)</span></div>
+        <div class="ep"><span class="method method-get">GET</span><span class="ep-path">/api/kb/:id</span><span class="ep-desc">Article + tags + source ticket</span></div>
+        <div class="ep"><span class="method method-patch">PATCH</span><span class="ep-path">/api/kb/:id</span><span class="ep-desc">Edit article or tags</span></div>
+        <div class="ep"><span class="method method-delete">DEL</span><span class="ep-path">/api/kb/:id</span><span class="ep-desc">Delete article</span></div>
+      </div>
+
+      <div class="section">
+        <h3>Dashboard  <span style="color:#475569;font-weight:400;text-transform:none;letter-spacing:0;">/api/dashboard</span></h3>
+        <div class="ep"><span class="method method-get">GET</span><span class="ep-path">/api/dashboard</span><span class="ep-desc">Totals, SLA health, by priority/status/category/type, avg resolution, recent 7</span></div>
+      </div>
+
+      <div class="section">
+        <h3>Notifications  <span style="color:#475569;font-weight:400;text-transform:none;letter-spacing:0;">/api/notifications</span></h3>
+        <div class="ep"><span class="method method-get">GET</span><span class="ep-path">/api/notifications</span><span class="ep-desc">All notifications for current user</span></div>
+        <div class="ep"><span class="method method-patch">PATCH</span><span class="ep-path">/api/notifications/:id/read</span><span class="ep-desc">Mark single notification read</span></div>
+        <div class="ep"><span class="method method-patch">PATCH</span><span class="ep-path">/api/notifications/read-all</span><span class="ep-desc">Mark all read</span></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="section">
+        <h3>Users  <span style="color:#475569;font-weight:400;text-transform:none;letter-spacing:0;">/api/users</span></h3>
+        <div class="ep"><span class="method method-get">GET</span><span class="ep-path">/api/users</span><span class="ep-desc">List all users (admin only)</span></div>
+        <div class="ep"><span class="method method-post">POST</span><span class="ep-path">/api/users</span><span class="ep-desc">Create user (admin only)</span></div>
+        <div class="ep"><span class="method method-patch">PATCH</span><span class="ep-path">/api/users/:id</span><span class="ep-desc">Update user (admin only)</span></div>
+        <div class="ep"><span class="method method-post">POST</span><span class="ep-path">/api/users/:id/toggle</span><span class="ep-desc">Toggle is_active (admin only)</span></div>
+      </div>
+
+      <div class="section">
+        <h3>Service Catalog  <span style="color:#475569;font-weight:400;text-transform:none;letter-spacing:0;">/api/catalog</span></h3>
+        <div class="ep"><span class="method method-get">GET</span><span class="ep-path">/api/catalog</span><span class="ep-desc">List active items with dynamic fields</span></div>
+        <div class="ep"><span class="method method-get">GET</span><span class="ep-path">/api/catalog/:id</span><span class="ep-desc">Single item + fields</span></div>
+        <div class="ep"><span class="method method-post">POST</span><span class="ep-path">/api/catalog/:id/submit</span><span class="ep-desc">Submit request → create ticket (+ approval if needed)</span></div>
+        <div class="ep"><span class="method method-post">POST</span><span class="ep-path">/api/catalog</span><span class="ep-desc">Create catalog item (admin/manager)</span></div>
+        <div class="ep"><span class="method method-patch">PATCH</span><span class="ep-path">/api/catalog/:id</span><span class="ep-desc">Edit catalog item</span></div>
+      </div>
+
+      <div class="section">
+        <h3>On-Call  <span style="color:#475569;font-weight:400;text-transform:none;letter-spacing:0;">/api/oncall</span></h3>
+        <div class="ep"><span class="method method-get">GET</span><span class="ep-path">/api/oncall</span><span class="ep-desc">Current on-call, all staff, next 14 days schedules</span></div>
+        <div class="ep"><span class="method method-post">POST</span><span class="ep-path">/api/oncall</span><span class="ep-desc">Create schedule slot (admin/manager)</span></div>
+        <div class="ep"><span class="method method-delete">DEL</span><span class="ep-path">/api/oncall/:id</span><span class="ep-desc">Delete schedule slot</span></div>
+        <div class="ep"><span class="method method-post">POST</span><span class="ep-path">/api/oncall/page/:userId</span><span class="ep-desc">Page a technician (urgent notification)</span></div>
+      </div>
+
+      <div class="section">
+        <h3>Problems  <span style="color:#475569;font-weight:400;text-transform:none;letter-spacing:0;">/api/problems</span></h3>
+        <div class="ep"><span class="method method-get">GET</span><span class="ep-path">/api/problems</span><span class="ep-desc">List all problems with linked ticket count</span></div>
+        <div class="ep"><span class="method method-post">POST</span><span class="ep-path">/api/problems</span><span class="ep-desc">Create problem record</span></div>
+        <div class="ep"><span class="method method-get">GET</span><span class="ep-path">/api/problems/:id</span><span class="ep-desc">Problem + linked tickets</span></div>
+        <div class="ep"><span class="method method-patch">PATCH</span><span class="ep-path">/api/problems/:id</span><span class="ep-desc">Update status/root cause/workaround</span></div>
+        <div class="ep"><span class="method method-post">POST</span><span class="ep-path">/api/problems/:id/link</span><span class="ep-desc">Link ticket(s) to problem</span></div>
+        <div class="ep"><span class="method method-delete">DEL</span><span class="ep-path">/api/problems/:id/tickets/:ticketId</span><span class="ep-desc">Unlink ticket from problem</span></div>
+        <div class="ep"><span class="method method-post">POST</span><span class="ep-path">/api/problems/:id/resolve</span><span class="ep-desc">Resolve problem + auto-resolve linked tickets</span></div>
+      </div>
+
+      <div class="section">
+        <h3>Change Requests  <span style="color:#475569;font-weight:400;text-transform:none;letter-spacing:0;">/api/changes</span></h3>
+        <div class="ep"><span class="method method-get">GET</span><span class="ep-path">/api/changes</span><span class="ep-desc">List all changes with linked ticket count</span></div>
+        <div class="ep"><span class="method method-post">POST</span><span class="ep-path">/api/changes</span><span class="ep-desc">Create change request (status: Draft)</span></div>
+        <div class="ep"><span class="method method-get">GET</span><span class="ep-path">/api/changes/:id</span><span class="ep-desc">Change + approvals + linked tickets</span></div>
+        <div class="ep"><span class="method method-patch">PATCH</span><span class="ep-path">/api/changes/:id</span><span class="ep-desc">Edit change details</span></div>
+        <div class="ep"><span class="method method-post">POST</span><span class="ep-path">/api/changes/:id/submit</span><span class="ep-desc">Submit for approval → notify managers</span></div>
+        <div class="ep"><span class="method method-post">POST</span><span class="ep-path">/api/changes/:id/approve</span><span class="ep-desc">Approve → notify requester</span></div>
+        <div class="ep"><span class="method method-post">POST</span><span class="ep-path">/api/changes/:id/reject</span><span class="ep-desc">Reject → notify requester</span></div>
+        <div class="ep"><span class="method method-post">POST</span><span class="ep-path">/api/changes/:id/link</span><span class="ep-desc">Link tickets to change</span></div>
+      </div>
+
+      <div class="section">
+        <h3>Email  <span style="color:#475569;font-weight:400;text-transform:none;letter-spacing:0;">/api/email</span></h3>
+        <div class="ep"><span class="method method-post">POST</span><span class="ep-path">/api/email/inbound</span><span class="ep-desc">Webhook: parse email → create ticket</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ TAB 5: DATABASE -->
+<div id="tab-database" class="tab-content">
+  <h2>Database Schema</h2>
+  <p class="subtitle">PostgreSQL — 18 tables across 17 migrations</p>
+
+  <div class="grid-3">
+    <div>
+      <div class="db-table">
+        <div class="db-table-header">users <span class="badge badge-blue">core</span></div>
+        <div class="db-table-body">
+          <div class="db-col"><span class="db-col-name">id</span><span class="db-col-type">SERIAL PK</span><span class="db-pk">PK</span></div>
+          <div class="db-col"><span class="db-col-name">email</span><span class="db-col-type">TEXT UNIQUE</span></div>
+          <div class="db-col"><span class="db-col-name">password_hash</span><span class="db-col-type">TEXT</span></div>
+          <div class="db-col"><span class="db-col-name">name</span><span class="db-col-type">TEXT</span></div>
+          <div class="db-col"><span class="db-col-name">role</span><span class="db-col-type">TEXT (7 values)</span></div>
+          <div class="db-col"><span class="db-col-name">department</span><span class="db-col-type">TEXT</span></div>
+          <div class="db-col"><span class="db-col-name">availability_status</span><span class="db-col-type">TEXT (4 values)</span></div>
+          <div class="db-col"><span class="db-col-name">skills</span><span class="db-col-type">TEXT[]</span></div>
+          <div class="db-col"><span class="db-col-name">is_active</span><span class="db-col-type">BOOLEAN</span></div>
+          <div class="db-col"><span class="db-col-name">created_at / updated_at</span><span class="db-col-type">TIMESTAMPTZ</span></div>
+        </div>
+      </div>
+
+      <div class="db-table">
+        <div class="db-table-header">notifications <span class="badge badge-purple">events</span></div>
+        <div class="db-table-body">
+          <div class="db-col"><span class="db-col-name">id</span><span class="db-col-type">SERIAL</span><span class="db-pk">PK</span></div>
+          <div class="db-col"><span class="db-col-name">user_id</span><span class="db-col-type">→ users.id</span><span class="db-fk">FK</span></div>
+          <div class="db-col"><span class="db-col-name">ticket_id</span><span class="db-col-type">→ tickets.id (nullable)</span><span class="db-fk">FK</span></div>
+          <div class="db-col"><span class="db-col-name">type</span><span class="db-col-type">TEXT (8 event types)</span></div>
+          <div class="db-col"><span class="db-col-name">message</span><span class="db-col-type">TEXT</span></div>
+          <div class="db-col"><span class="db-col-name">is_read</span><span class="db-col-type">BOOLEAN</span></div>
+          <div class="db-col"><span class="db-col-name">created_at</span><span class="db-col-type">TIMESTAMPTZ</span></div>
+        </div>
+      </div>
+
+      <div class="db-table">
+        <div class="db-table-header">sla_alerts <span class="badge badge-orange">dedup</span></div>
+        <div class="db-table-body">
+          <div class="db-col"><span class="db-col-name">id</span><span class="db-col-type">SERIAL</span><span class="db-pk">PK</span></div>
+          <div class="db-col"><span class="db-col-name">ticket_id</span><span class="db-col-type">→ tickets.id</span><span class="db-fk">FK</span></div>
+          <div class="db-col"><span class="db-col-name">alert_type</span><span class="db-col-type">at_risk | breached | auto_escalated</span></div>
+          <div class="db-col"><span class="db-col-name">UNIQUE(ticket_id, alert_type)</span><span class="db-col-type" style="color:#f97316">fires once only</span></div>
+          <div class="db-col"><span class="db-col-name">created_at</span><span class="db-col-type">TIMESTAMPTZ</span></div>
+        </div>
+      </div>
+
+      <div class="db-table">
+        <div class="db-table-header">oncall_schedules <span class="badge badge-teal">scheduling</span></div>
+        <div class="db-table-body">
+          <div class="db-col"><span class="db-col-name">id</span><span class="db-col-type">SERIAL</span><span class="db-pk">PK</span></div>
+          <div class="db-col"><span class="db-col-name">user_id</span><span class="db-col-type">→ users.id</span><span class="db-fk">FK</span></div>
+          <div class="db-col"><span class="db-col-name">start_time / end_time</span><span class="db-col-type">TIMESTAMPTZ</span></div>
+          <div class="db-col"><span class="db-col-name">label</span><span class="db-col-type">TEXT</span></div>
+          <div class="db-col"><span class="db-col-name">created_by</span><span class="db-col-type">→ users.id</span><span class="db-fk">FK</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="db-table">
+        <div class="db-table-header">tickets <span class="badge badge-red">core</span></div>
+        <div class="db-table-body">
+          <div class="db-col"><span class="db-col-name">id</span><span class="db-col-type">SERIAL</span><span class="db-pk">PK</span></div>
+          <div class="db-col"><span class="db-col-name">requester_name / email</span><span class="db-col-type">TEXT</span></div>
+          <div class="db-col"><span class="db-col-name">department / location</span><span class="db-col-type">TEXT</span></div>
+          <div class="db-col"><span class="db-col-name">type</span><span class="db-col-type">Incident | Service Request</span></div>
+          <div class="db-col"><span class="db-col-name">priority</span><span class="db-col-type">P1 | P2 | P3 | P4</span></div>
+          <div class="db-col"><span class="db-col-name">category</span><span class="db-col-type">TEXT (5 categories)</span></div>
+          <div class="db-col"><span class="db-col-name">title / description</span><span class="db-col-type">TEXT</span></div>
+          <div class="db-col"><span class="db-col-name">status</span><span class="db-col-type">New | In Progress | Escalated | Resolved | Closed | Pending Approval</span></div>
+          <div class="db-col"><span class="db-col-name">sla_minutes</span><span class="db-col-type">INTEGER (60/240/480/4320)</span></div>
+          <div class="db-col"><span class="db-col-name">assignment_status</span><span class="db-col-type">unassigned | pending_acceptance | accepted</span></div>
+          <div class="db-col"><span class="db-col-name">assigned_to_user_id</span><span class="db-col-type">→ users.id</span><span class="db-fk">FK</span></div>
+          <div class="db-col"><span class="db-col-name">created_by_user_id</span><span class="db-col-type">→ users.id</span><span class="db-fk">FK</span></div>
+          <div class="db-col"><span class="db-col-name">kb_article_id</span><span class="db-col-type">→ kb_articles.id</span><span class="db-fk">FK</span></div>
+          <div class="db-col"><span class="db-col-name">catalog_item_id</span><span class="db-col-type">→ catalog_items.id</span><span class="db-fk">FK</span></div>
+          <div class="db-col"><span class="db-col-name">source</span><span class="db-col-type">web | email | catalog</span></div>
+          <div class="db-col"><span class="db-col-name">resolution_notes</span><span class="db-col-type">TEXT</span></div>
+          <div class="db-col"><span class="db-col-name">resolved_at / closed_at</span><span class="db-col-type">TIMESTAMPTZ</span></div>
+        </div>
+      </div>
+
+      <div class="db-table">
+        <div class="db-table-header">ticket_comments</div>
+        <div class="db-table-body">
+          <div class="db-col"><span class="db-col-name">ticket_id</span><span class="db-col-type">→ tickets.id</span><span class="db-fk">FK</span></div>
+          <div class="db-col"><span class="db-col-name">author</span><span class="db-col-type">TEXT</span></div>
+          <div class="db-col"><span class="db-col-name">body</span><span class="db-col-type">TEXT</span></div>
+          <div class="db-col"><span class="db-col-name">is_internal</span><span class="db-col-type">BOOLEAN</span></div>
+        </div>
+      </div>
+
+      <div class="db-table">
+        <div class="db-table-header">escalations</div>
+        <div class="db-table-body">
+          <div class="db-col"><span class="db-col-name">ticket_id</span><span class="db-col-type">→ tickets.id</span><span class="db-fk">FK</span></div>
+          <div class="db-col"><span class="db-col-name">reason</span><span class="db-col-type">TEXT</span></div>
+          <div class="db-col"><span class="db-col-name">escalated_to_team</span><span class="db-col-type">TEXT</span></div>
+          <div class="db-col"><span class="db-col-name">escalated_by</span><span class="db-col-type">TEXT</span></div>
+          <div class="db-col"><span class="db-col-name">escalated_at</span><span class="db-col-type">TIMESTAMPTZ</span></div>
+        </div>
+      </div>
+
+      <div class="db-table">
+        <div class="db-table-header">approvals</div>
+        <div class="db-table-body">
+          <div class="db-col"><span class="db-col-name">ticket_id</span><span class="db-col-type">→ tickets.id</span><span class="db-fk">FK</span></div>
+          <div class="db-col"><span class="db-col-name">status</span><span class="db-col-type">pending | approved | rejected</span></div>
+          <div class="db-col"><span class="db-col-name">approver_id</span><span class="db-col-type">→ users.id</span><span class="db-fk">FK</span></div>
+          <div class="db-col"><span class="db-col-name">comment / reviewed_at</span><span class="db-col-type">TEXT / TIMESTAMPTZ</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="db-table">
+        <div class="db-table-header">kb_articles <span class="badge badge-green">knowledge</span></div>
+        <div class="db-table-body">
+          <div class="db-col"><span class="db-col-name">id</span><span class="db-col-type">SERIAL</span><span class="db-pk">PK</span></div>
+          <div class="db-col"><span class="db-col-name">title / symptoms</span><span class="db-col-type">TEXT</span></div>
+          <div class="db-col"><span class="db-col-name">resolution_steps</span><span class="db-col-type">TEXT</span></div>
+          <div class="db-col"><span class="db-col-name">category / author</span><span class="db-col-type">TEXT</span></div>
+          <div class="db-col"><span class="db-col-name">is_published</span><span class="db-col-type">BOOLEAN</span></div>
+          <div class="db-col"><span class="db-col-name">source_ticket_id</span><span class="db-col-type">→ tickets.id</span><span class="db-fk">FK</span></div>
+        </div>
+      </div>
+
+      <div class="db-table">
+        <div class="db-table-header">kb_tags</div>
+        <div class="db-table-body">
+          <div class="db-col"><span class="db-col-name">article_id</span><span class="db-col-type">→ kb_articles.id</span><span class="db-fk">FK</span></div>
+          <div class="db-col"><span class="db-col-name">tag</span><span class="db-col-type">TEXT</span></div>
+        </div>
+      </div>
+
+      <div class="db-table">
+        <div class="db-table-header">catalog_items + catalog_fields</div>
+        <div class="db-table-body">
+          <div class="db-col"><span class="db-col-name">name / description</span><span class="db-col-type">TEXT</span></div>
+          <div class="db-col"><span class="db-col-name">requires_approval</span><span class="db-col-type">BOOLEAN</span></div>
+          <div class="db-col"><span class="db-col-name">default_priority</span><span class="db-col-type">P1–P4</span></div>
+          <div class="db-col"><span class="db-col-name">is_active / sort_order</span><span class="db-col-type">BOOLEAN / INT</span></div>
+          <div class="db-col"><span class="db-col-name">catalog_fields.label</span><span class="db-col-type">TEXT (dynamic form fields)</span></div>
+          <div class="db-col"><span class="db-col-name">catalog_fields.field_type</span><span class="db-col-type">TEXT</span></div>
+          <div class="db-col"><span class="db-col-name">catalog_fields.required</span><span class="db-col-type">BOOLEAN</span></div>
+        </div>
+      </div>
+
+      <div class="db-table">
+        <div class="db-table-header">problems + problem_tickets</div>
+        <div class="db-table-body">
+          <div class="db-col"><span class="db-col-name">title / description</span><span class="db-col-type">TEXT</span></div>
+          <div class="db-col"><span class="db-col-name">status</span><span class="db-col-type">Open → In Investigation → Known Error → Resolved → Closed</span></div>
+          <div class="db-col"><span class="db-col-name">root_cause / workaround / resolution</span><span class="db-col-type">TEXT</span></div>
+          <div class="db-col"><span class="db-col-name">assigned_to_user_id</span><span class="db-col-type">→ users.id</span><span class="db-fk">FK</span></div>
+          <div class="db-col"><span class="db-col-name">problem_tickets</span><span class="db-col-type">JOIN TABLE (many-to-many)</span></div>
+        </div>
+      </div>
+
+      <div class="db-table">
+        <div class="db-table-header">change_requests + change_approvals + change_tickets</div>
+        <div class="db-table-body">
+          <div class="db-col"><span class="db-col-name">type</span><span class="db-col-type">Standard | Normal | Emergency</span></div>
+          <div class="db-col"><span class="db-col-name">risk_level</span><span class="db-col-type">Low | Medium | High | Critical</span></div>
+          <div class="db-col"><span class="db-col-name">status</span><span class="db-col-type">Draft→Submitted→Approved/Rejected→In Progress→Completed</span></div>
+          <div class="db-col"><span class="db-col-name">implementation_plan / rollback_plan</span><span class="db-col-type">TEXT</span></div>
+          <div class="db-col"><span class="db-col-name">maintenance_window_start/end</span><span class="db-col-type">TIMESTAMPTZ</span></div>
+          <div class="db-col"><span class="db-col-name">change_approvals</span><span class="db-col-type">approver_id, status, comment, reviewed_at</span></div>
+          <div class="db-col"><span class="db-col-name">change_tickets</span><span class="db-col-type">JOIN TABLE (many-to-many)</span></div>
+        </div>
+      </div>
+
+      <div class="db-table">
+        <div class="db-table-header">time_entries</div>
+        <div class="db-table-body">
+          <div class="db-col"><span class="db-col-name">ticket_id</span><span class="db-col-type">→ tickets.id</span><span class="db-fk">FK</span></div>
+          <div class="db-col"><span class="db-col-name">user_id</span><span class="db-col-type">→ users.id</span><span class="db-fk">FK</span></div>
+          <div class="db-col"><span class="db-col-name">minutes / note</span><span class="db-col-type">INTEGER / TEXT</span></div>
+          <div class="db-col"><span class="db-col-name">logged_at</span><span class="db-col-type">TIMESTAMPTZ</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ TAB 6: FEATURES -->
+<div id="tab-features" class="tab-content">
+  <h2>Feature Map</h2>
+  <p class="subtitle">Every implemented feature and how the pieces connect</p>
+
+  <div class="grid-2">
+    <div class="card" style="border-color:#2563eb44;">
+      <div style="font-size:14px;font-weight:700;color:#93c5fd;margin-bottom:12px;">🎫 Ticket Management</div>
+      <div class="pill-group" style="margin-bottom:12px;">
+        <span class="pill">Create tickets</span><span class="pill">List + search + filter</span><span class="pill">Pagination</span>
+        <span class="pill">Status lifecycle</span><span class="pill">Priority P1-P4</span><span class="pill">Category routing</span>
+        <span class="pill">Assign to user</span><span class="pill">Accept/Decline</span><span class="pill">Escalate</span>
+        <span class="pill">Comments (public + internal)</span><span class="pill">Resolution notes</span>
+        <span class="pill">SLA bar display</span><span class="pill">Convert → KB</span>
+      </div>
+      <div style="font-size:11px;color:#475569;">Role-based visibility: Admins/managers/agents see all. Technicians see assigned only. Requesters see own only.</div>
+    </div>
+
+    <div class="card" style="border-color:#9333ea44;">
+      <div style="font-size:14px;font-weight:700;color:#d8b4fe;margin-bottom:12px;">⏱ SLA & Escalation Engine</div>
+      <div class="pill-group" style="margin-bottom:12px;">
+        <span class="pill">Per-priority SLA targets</span><span class="pill">Real-time % calculation</span>
+        <span class="pill">SLA bar in UI (green/yellow/red)</span><span class="pill">At-risk alert (75%)</span>
+        <span class="pill">Breach alert (100%)</span><span class="pill">Auto-escalate on breach</span>
+        <span class="pill">Dedup via sla_alerts table</span><span class="pill">Manual escalation + team routing</span>
+        <span class="pill">5-min cron background check</span>
+      </div>
+      <div style="font-size:11px;color:#475569;">SLA: P1=1hr, P2=4hr, P3=8hr, P4=72hr. Category→team: Network→Network Infra, Clinical App→Clinical Systems, etc.</div>
+    </div>
+
+    <div class="card" style="border-color:#16a34a44;">
+      <div style="font-size:14px;font-weight:700;color:#86efac;margin-bottom:12px;">📊 Dashboard & Analytics</div>
+      <div class="pill-group" style="margin-bottom:12px;">
+        <span class="pill">Total / open / resolved counts</span><span class="pill">SLA health (on-track/at-risk/breached)</span>
+        <span class="pill">By priority chart</span><span class="pill">By status chart</span>
+        <span class="pill">By category chart</span><span class="pill">By type chart</span>
+        <span class="pill">Avg resolution time (30 days)</span><span class="pill">Recent 7 tickets</span>
+        <span class="pill">Role-scoped (own/assigned/all)</span>
+      </div>
+    </div>
+
+    <div class="card" style="border-color:#ea580c44;">
+      <div style="font-size:14px;font-weight:700;color:#fdba74;margin-bottom:12px;">📋 Service Catalog</div>
+      <div class="pill-group" style="margin-bottom:12px;">
+        <span class="pill">Browse catalog items</span><span class="pill">Dynamic form fields per item</span>
+        <span class="pill">Requires-approval flag</span><span class="pill">Ticket auto-creation on submit</span>
+        <span class="pill">Approval workflow</span><span class="pill">Manager notification</span>
+        <span class="pill">Source tracked (catalog)</span>
+      </div>
+    </div>
+
+    <div class="card" style="border-color:#0d948444;">
+      <div style="font-size:14px;font-weight:700;color:#5eead4;margin-bottom:12px;">📚 Knowledge Base</div>
+      <div class="pill-group" style="margin-bottom:12px;">
+        <span class="pill">Browse & search articles</span><span class="pill">Filter by category / tag</span>
+        <span class="pill">Symptoms + resolution steps</span><span class="pill">Tag system</span>
+        <span class="pill">Create / edit / publish / delete</span><span class="pill">Convert from resolved ticket</span>
+        <span class="pill">Links back to source ticket</span>
+      </div>
+    </div>
+
+    <div class="card" style="border-color:#9333ea44;">
+      <div style="font-size:14px;font-weight:700;color:#d8b4fe;margin-bottom:12px;">🔔 Notification System</div>
+      <div class="notif-list">
+        <div class="notif-item"><span class="notif-icon">🆕</span><span class="notif-name">new_ticket</span><span class="notif-desc">New ticket created by requester → admins/managers</span></div>
+        <div class="notif-item"><span class="notif-icon">📝</span><span class="notif-name">ticket_updated</span><span class="notif-desc">Status changed → requester + assigned tech</span></div>
+        <div class="notif-item"><span class="notif-icon">👤</span><span class="notif-name">ticket_assigned</span><span class="notif-desc">Ticket assigned/accepted/declined → tech + managers</span></div>
+        <div class="notif-item"><span class="notif-icon">💬</span><span class="notif-name">ticket_replied</span><span class="notif-desc">Comment added → opposite party</span></div>
+        <div class="notif-item"><span class="notif-icon">🔺</span><span class="notif-name">ticket_escalated</span><span class="notif-desc">Ticket escalated → requester + tech</span></div>
+        <div class="notif-item"><span class="notif-icon">⚠️</span><span class="notif-name">sla_at_risk</span><span class="notif-desc">≥75% SLA elapsed → tech + managers</span></div>
+        <div class="notif-item"><span class="notif-icon">🚨</span><span class="notif-name">sla_breached</span><span class="notif-desc">&gt;100% elapsed or P1 auto-assign → tech + managers</span></div>
+        <div class="notif-item"><span class="notif-icon">✅</span><span class="notif-name">approval_needed / approval_resolved</span><span class="notif-desc">Catalog/change approval workflow</span></div>
+      </div>
+    </div>
+
+    <div class="card" style="border-color:#2563eb44;">
+      <div style="font-size:14px;font-weight:700;color:#93c5fd;margin-bottom:12px;">🔍 Problem Management</div>
+      <div class="pill-group" style="margin-bottom:12px;">
+        <span class="pill">Create problem records</span><span class="pill">Link multiple tickets</span>
+        <span class="pill">Root cause analysis</span><span class="pill">Known workaround</span>
+        <span class="pill">5-status lifecycle</span><span class="pill">Resolve → auto-resolve linked tickets</span>
+        <span class="pill">Notify requesters on bulk resolve</span>
+      </div>
+      <div style="font-size:11px;color:#475569;">Statuses: Open → In Investigation → Known Error → Resolved → Closed</div>
+    </div>
+
+    <div class="card" style="border-color:#16a34a44;">
+      <div style="font-size:14px;font-weight:700;color:#86efac;margin-bottom:12px;">🔄 Change Management</div>
+      <div class="pill-group" style="margin-bottom:12px;">
+        <span class="pill">Types: Standard / Normal / Emergency</span>
+        <span class="pill">Risk levels: Low–Critical</span>
+        <span class="pill">Implementation + rollback plans</span>
+        <span class="pill">Maintenance windows</span>
+        <span class="pill">Approval workflow</span><span class="pill">Link affected tickets</span>
+        <span class="pill">7-status lifecycle</span>
+      </div>
+      <div style="font-size:11px;color:#475569;">Statuses: Draft → Submitted → Approved/Rejected → In Progress → Completed/Cancelled</div>
+    </div>
+
+    <div class="card" style="border-color:#0d948444;">
+      <div style="font-size:14px;font-weight:700;color:#5eead4;margin-bottom:12px;">📅 On-Call Scheduling</div>
+      <div class="pill-group" style="margin-bottom:12px;">
+        <span class="pill">Create schedule slots</span><span class="pill">View staff availability</span>
+        <span class="pill">14-day schedule view</span><span class="pill">Auto-set user on_call status</span>
+        <span class="pill">P1 auto-assignment to on-call</span><span class="pill">Manual page user (urgent notification)</span>
+        <span class="pill">Admin/manager only</span>
+      </div>
+    </div>
+
+    <div class="card" style="border-color:#ea580c44;">
+      <div style="font-size:14px;font-weight:700;color:#fdba74;margin-bottom:12px;">📬 Email-to-Ticket</div>
+      <div class="pill-group" style="margin-bottom:12px;">
+        <span class="pill">IMAP polling (every 2 min)</span><span class="pill">Webhook endpoint</span>
+        <span class="pill">Parse from/subject/body</span><span class="pill">Auto-create ticket</span>
+        <span class="pill">Source: email</span><span class="pill">Mark email \\Seen after processing</span>
+      </div>
+      <div style="font-size:11px;color:#475569;">Requires: imapflow + mailparser npm packages + EMAIL_IMAP_* env vars</div>
+    </div>
+
+    <div class="card" style="border-color:#2563eb44;">
+      <div style="font-size:14px;font-weight:700;color:#93c5fd;margin-bottom:12px;">👤 User Management (Admin)</div>
+      <div class="pill-group" style="margin-bottom:12px;">
+        <span class="pill">Create users</span><span class="pill">Edit role / department</span>
+        <span class="pill">Toggle active/inactive</span><span class="pill">7 available roles</span>
+        <span class="pill">Skills array per user</span><span class="pill">Availability status</span>
+      </div>
+    </div>
+
+    <div class="card" style="border-color:#9333ea44;">
+      <div style="font-size:14px;font-weight:700;color:#d8b4fe;margin-bottom:12px;">🔐 Auth System</div>
+      <div class="pill-group" style="margin-bottom:12px;">
+        <span class="pill">Email + password (bcrypt)</span><span class="pill">JWT (24h expiry)</span>
+        <span class="pill">httpOnly cookie</span><span class="pill">requireAuth middleware</span>
+        <span class="pill">requireRole(...roles) guard</span><span class="pill">rootLoader protects all React routes</span>
+        <span class="pill">RoleGate component (hide UI)</span><span class="pill">Redirect preserves intended URL</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  event.target.classList.add('active');
+}
+</script>
+</body>
+</html>

@@ -2,23 +2,44 @@ const pool = require('../db/pool');
 const { SLA_MINUTES, ESCALATION_TEAMS, REQUESTER_ROLES } = require('../config/constants');
 const { enrich } = require('../utils/sla');
 const { getCurrentOncallUser } = require('./oncallController');
+const { notify, notifyMany } = require('../services/notifier');
 
-// ─── Notification helpers ─────────────────────────────────────────────────────
+// ─── Notification helpers (thin wrappers kept for backward compat) ────────────
 
 async function notifyUser(userId, ticketId, type, message) {
-  if (!userId) return;
-  try {
-    await pool.query(
-      'INSERT INTO notifications (user_id, ticket_id, type, message) VALUES ($1,$2,$3,$4)',
-      [userId, ticketId, type, message]
-    );
-  } catch {
-    // non-fatal
-  }
+  return notify(userId, ticketId, type, message);
 }
 
 async function notifyUsers(userIds, ticketId, type, message) {
-  await Promise.all(userIds.map((uid) => notifyUser(uid, ticketId, type, message)));
+  return notifyMany(userIds, ticketId, type, message);
+}
+
+// ─── Spawn ticket_slas for a newly created ticket ────────────────────────────
+
+async function spawnTicketSlas(ticketId, priority, category) {
+  try {
+    // Find all active SLA definitions that match this ticket's priority/category
+    const { rows: defs } = await pool.query(`
+      SELECT id FROM sla_definitions
+      WHERE is_active = TRUE
+        AND (priority_filter IS NULL OR $1 = ANY(priority_filter))
+        AND (category_filter IS NULL OR $2 = ANY(category_filter))
+    `, [priority, category]);
+
+    if (!defs.length) return;
+
+    // Insert a ticket_sla record for each matching definition (ignore conflicts)
+    await Promise.all(
+      defs.map((d) =>
+        pool.query(
+          `INSERT INTO ticket_slas (ticket_id, definition_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+          [ticketId, d.id]
+        )
+      )
+    );
+  } catch (err) {
+    console.error('[ticketController] spawnTicketSlas error:', err.message);
+  }
 }
 
 function statusMessage(status, title) {
@@ -297,6 +318,9 @@ const createTicket = async (req, res, next) => {
       );
     }
 
+    // Spawn SLA definition instances for this ticket (non-blocking)
+    spawnTicketSlas(ticket.id, ticket.priority, ticket.category);
+
     res.status(201).json(enrich(ticket));
   } catch (err) {
     next(err);
@@ -411,6 +435,15 @@ const updateTicket = async (req, res, next) => {
       );
     }
     // ── End notifications ────────────────────────────────────────────────────
+
+    // Mark all active ticket_slas as 'met' when ticket is resolved/closed
+    if (['Resolved', 'Closed'].includes(req.body.status)) {
+      pool.query(
+        `UPDATE ticket_slas SET status = 'met', met_at = NOW()
+         WHERE ticket_id = $1 AND status = 'active'`,
+        [ticket.id]
+      ).catch(() => {});
+    }
 
     res.json(enrich(ticket));
   } catch (err) {
