@@ -1,0 +1,1149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Dispatchly — Complete UML & Architecture</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<style>
+  :root{
+    --bg:#0b1020; --panel:#131a33; --panel2:#1a2140; --ink:#e6ecff; --muted:#9aa7cf;
+    --accent:#7aa2ff; --accent2:#5eead4; --warn:#fbbf24; --danger:#f87171; --ok:#34d399;
+    --border:#2b345c;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    background:linear-gradient(180deg,#0a0f22,#0b1020 40%,#0a0f22); color:var(--ink);
+    min-height:100vh;
+  }
+  header{
+    padding:28px 32px 8px; border-bottom:1px solid var(--border);
+    background:linear-gradient(90deg,#111838,#0b1230);
+  }
+  h1{margin:0 0 6px; font-size:26px; letter-spacing:.3px}
+  header p{margin:0; color:var(--muted); font-size:13.5px}
+  nav.tabs{
+    position:sticky; top:0; z-index:10; display:flex; gap:6px; padding:12px 24px;
+    background:rgba(11,16,32,.92); backdrop-filter:blur(8px); border-bottom:1px solid var(--border);
+    flex-wrap:wrap;
+  }
+  nav.tabs button{
+    background:var(--panel); color:var(--ink); border:1px solid var(--border);
+    padding:8px 14px; border-radius:8px; font-size:13px; cursor:pointer;
+    transition:.15s;
+  }
+  nav.tabs button:hover{background:var(--panel2); border-color:var(--accent)}
+  nav.tabs button.active{background:var(--accent); color:#0b1020; border-color:var(--accent); font-weight:600}
+  main{padding:24px 32px 64px; max-width:1600px; margin:0 auto}
+  section{display:none; animation:fade .25s ease}
+  section.active{display:block}
+  @keyframes fade{from{opacity:0; transform:translateY(4px)} to{opacity:1; transform:none}}
+  h2{font-size:20px; margin:0 0 4px; color:var(--accent2)}
+  .subtitle{color:var(--muted); font-size:13px; margin:0 0 18px}
+  .card{
+    background:var(--panel); border:1px solid var(--border); border-radius:14px;
+    padding:20px; margin:16px 0; overflow:auto;
+  }
+  .card > .mermaid{background:#fff; border-radius:10px; padding:14px}
+  .grid{display:grid; gap:14px}
+  .grid-2{grid-template-columns:repeat(auto-fit,minmax(360px,1fr))}
+  .grid-3{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+  .chip{
+    display:inline-block; padding:2px 8px; border-radius:999px; font-size:11.5px;
+    background:#243056; color:#cfd8ff; margin-right:4px; border:1px solid var(--border);
+  }
+  .chip.admin{background:#3b1d3b; color:#fecaca; border-color:#5b2c5b}
+  .chip.manager{background:#3b2a1d; color:#fed7aa; border-color:#5b3f2c}
+  .chip.agent{background:#1d3b3b; color:#a7f3d0; border-color:#2c5b5b}
+  .chip.tech{background:#1d2f3b; color:#a5c7f3; border-color:#2c445b}
+  .chip.spec{background:#2a1d3b; color:#c4b5fd; border-color:#3f2c5b}
+  .chip.hr{background:#3b1d2d; color:#fda4af; border-color:#5b2c40}
+  .chip.client{background:#1d3b2a; color:#86efac; border-color:#2c5b40}
+  table{width:100%; border-collapse:collapse; font-size:13px}
+  th,td{border:1px solid var(--border); padding:8px 10px; text-align:left}
+  th{background:var(--panel2); color:var(--accent2); font-weight:600}
+  tr:nth-child(even) td{background:#111731}
+  code{background:#111731; color:#a7f3d0; padding:1px 6px; border-radius:4px; font-size:12px}
+  .legend{display:flex; gap:14px; flex-wrap:wrap; font-size:12.5px; color:var(--muted); margin-top:8px}
+  .legend .dot{display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:6px; vertical-align:middle}
+  .footer{color:var(--muted); font-size:12px; text-align:center; padding:20px}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Dispatchly — Complete System UML</h1>
+  <p>ITIL-aligned IT Service Desk · React 19 + Express 5 + PostgreSQL 18 · 22 migrations · 15 controllers · 7 background/domain services</p>
+</header>
+
+<nav class="tabs">
+  <button data-tab="overview" class="active">System Overview</button>
+  <button data-tab="classes">Class Diagram (DB Schema)</button>
+  <button data-tab="users">Users & Roles</button>
+  <button data-tab="components">Component Architecture</button>
+  <button data-tab="api">API Surface</button>
+  <button data-tab="workflows">Workflows &amp; State</button>
+  <button data-tab="services">Background Services</button>
+</nav>
+
+<main>
+
+<!-- ============================= OVERVIEW ============================= -->
+<section id="overview" class="active">
+  <h2>1 · High-Level System Diagram</h2>
+  <p class="subtitle">Every actor, subsystem, and data flow at a glance.</p>
+  <div class="card">
+  <div class="mermaid">
+flowchart LR
+  subgraph ACTORS["👥 Actors"]
+    U1["Client / HR<br/>(requesters)"]
+    U2["Agent (Tier 1)"]
+    U3["Technician / Specialist<br/>(Tier 2)"]
+    U4["Manager"]
+    U5["Admin"]
+    EMAIL[["📧 Inbound<br/>Email (IMAP)"]]
+  end
+
+  subgraph FE["🖥 React Frontend (Vite · port 5173)"]
+    LP[LoginPage]
+    DP[DashboardPage]
+    TP[TicketsPage / Detail]
+    CP[CatalogPage]
+    KP[KB Pages]
+    PB[Problems Pages]
+    CH[Changes Pages]
+    OC[OnCall / Schedules]
+    OR[Org / Skills]
+    AS[AgentStatus]
+    AU[Admin Users]
+    AuthCtx((AuthContext<br/>+ RoleGate))
+  end
+
+  subgraph BE["⚙️ Express API (port 3001)"]
+    MW[["Middleware<br/>requireAuth · requireRole · RBAC"]]
+    R1[/auth/]:::rt
+    R2[/tickets/]:::rt
+    R3[/kb/]:::rt
+    R4[/dashboard/]:::rt
+    R5[/users/]:::rt
+    R6[/notifications/]:::rt
+    R7[/catalog/]:::rt
+    R8[/email/]:::rt
+    R9[/oncall/]:::rt
+    R10[/problems/]:::rt
+    R11[/changes/]:::rt
+    R12[/departments/]:::rt
+    R13[/skills/]:::rt
+    R14[/agent-status/]:::rt
+  end
+
+  subgraph SVC["🧩 Domain / Background Services"]
+    SLA["slaMonitor<br/>(cron · 5m)"]
+    SCH["scheduleManager<br/>(cron · 1m)"]
+    POLL["emailPoller<br/>(cron · 2m)"]
+    ES[emailService]
+    ROUTER[skillsRouter]
+    NOTIF[notifier]
+    SMTP[[emailNotifier · SMTP]]
+  end
+
+  subgraph DB["🐘 PostgreSQL 18"]
+    T1[(tickets)]
+    T2[(users)]
+    T3[(kb_articles)]
+    T4[(catalog_items)]
+    T5[(problems)]
+    T6[(change_requests)]
+    T7[(sla_definitions · ticket_slas)]
+    T8[(departments · teams)]
+    T9[(skills · user_skills)]
+    T10[(work_schedules · oncall_schedules)]
+    T11[(notifications · sla_alerts · agent_status_log)]
+    T12[(permissions · role_permissions · user_permissions)]
+  end
+
+  U1 & U2 & U3 & U4 & U5 --> FE
+  EMAIL --> POLL --> ES --> T1
+  FE -- "fetch /api/* · JWT cookie" --> MW
+  MW --> R1 & R2 & R3 & R4 & R5 & R6 & R7 & R8 & R9 & R10 & R11 & R12 & R13 & R14
+  R2 & R3 & R4 & R5 & R7 & R10 & R11 --> DB
+  R14 --> SCH
+  R9 --> T10
+  SLA -- "read tickets<br/>write alerts" --> T1 & T11
+  SLA --> NOTIF
+  SCH -- "auto status transitions" --> T2 & T11
+  ROUTER -- "assign ticket" --> T1
+  NOTIF --> T11
+  NOTIF --> SMTP -.-> U1
+
+  classDef rt fill:#e0e7ff,stroke:#4f46e5,color:#312e81,font-size:11px
+  style ACTORS fill:#fff7ed,stroke:#f59e0b
+  style FE fill:#eff6ff,stroke:#3b82f6
+  style BE fill:#f0fdf4,stroke:#22c55e
+  style SVC fill:#fef3c7,stroke:#eab308
+  style DB fill:#faf5ff,stroke:#a855f7
+  </div>
+  </div>
+
+  <div class="grid grid-3">
+    <div class="card">
+      <h3 style="margin-top:0;color:var(--accent2)">Frontend</h3>
+      <p style="color:var(--muted);font-size:13px;margin:4px 0 8px">Single-page app, React Router v7 data APIs (loaders + actions).</p>
+      <span class="chip">React 19</span>
+      <span class="chip">React Router v7</span>
+      <span class="chip">Tailwind v4</span>
+      <span class="chip">Vite 8</span>
+      <span class="chip">date-fns</span>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0;color:var(--accent2)">Backend</h3>
+      <p style="color:var(--muted);font-size:13px;margin:4px 0 8px">Express 5, JWT auth via HttpOnly cookie, no ORM — raw <code>pg</code>.</p>
+      <span class="chip">Node.js 26</span>
+      <span class="chip">Express 5</span>
+      <span class="chip">node-postgres</span>
+      <span class="chip">JWT</span>
+      <span class="chip">node-cron</span>
+      <span class="chip">nodemailer</span>
+      <span class="chip">imapflow</span>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0;color:var(--accent2)">Database</h3>
+      <p style="color:var(--muted);font-size:13px;margin:4px 0 8px">Custom pg-based migration runner, 22 migrations applied in numeric order.</p>
+      <span class="chip">PostgreSQL 18</span>
+      <span class="chip">30+ tables</span>
+      <span class="chip">schema_migrations</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============================= CLASSES ============================= -->
+<section id="classes">
+  <h2>2 · Class Diagram — Domain / DB Schema</h2>
+  <p class="subtitle">Every table modelled as a class with attributes, key methods, and foreign-key relationships.</p>
+
+  <div class="card">
+    <div class="mermaid">
+classDiagram
+  direction LR
+
+  class User {
+    +int id PK
+    +string email UNIQUE
+    +string password_hash
+    +string name
+    +Role role
+    +string department
+    +int department_id FK
+    +int team_id FK
+    +int manager_id FK
+    +string title
+    +string employee_number UNIQUE
+    +bool is_active
+    +Status current_status
+    +string current_status_reason
+    +timestamptz current_status_since
+    +int current_status_set_by FK
+    +Status availability_status
+    +text[] skills
+    +timestamptz created_at
+    +authenticate() JWT
+    +hasPermission(res, act) bool
+  }
+
+  class Ticket {
+    +int id PK
+    +string requester_name
+    +string requester_email
+    +string department
+    +string location
+    +Type type
+    +Priority priority
+    +string category
+    +string title
+    +text description
+    +TicketStatus status
+    +int sla_minutes
+    +text resolution_notes
+    +timestamptz resolved_at
+    +timestamptz closed_at
+    +int created_by_user_id FK
+    +int assigned_to_user_id FK
+    +int kb_article_id FK
+    +Source source
+    +string email_message_id UNIQUE
+    +string email_from
+    +int catalog_item_id FK
+    +AssignmentStatus assignment_status
+    +timestamptz created_at
+    +escalate(reason, team)
+    +assign(userId)
+    +resolve(notes)
+    +convertToKb()
+  }
+
+  class Escalation {
+    +int id PK
+    +int ticket_id FK
+    +text reason
+    +string escalated_to_team
+    +string escalated_by
+    +timestamptz escalated_at
+  }
+
+  class TicketComment {
+    +int id PK
+    +int ticket_id FK
+    +string author
+    +text body
+    +bool is_internal
+    +timestamptz created_at
+  }
+
+  class KbArticle {
+    +int id PK
+    +string title
+    +text symptoms
+    +text resolution_steps
+    +string category
+    +string author
+    +bool is_published
+    +int source_ticket_id FK
+    +timestamptz created_at
+    +publish() / unpublish()
+  }
+
+  class KbTag {
+    +int id PK
+    +int article_id FK
+    +string tag
+  }
+
+  class Notification {
+    +int id PK
+    +int user_id FK
+    +int ticket_id FK
+    +NotifType type
+    +text message
+    +bool is_read
+    +timestamptz created_at
+  }
+
+  class SlaAlert {
+    +int id PK
+    +int ticket_id FK
+    +AlertType alert_type
+    +timestamptz fired_at
+  }
+
+  class CatalogItem {
+    +int id PK
+    +string name
+    +text description
+    +string category
+    +string icon
+    +Priority default_priority
+    +int estimated_minutes
+    +bool requires_approval
+    +Role approver_role
+    +bool is_active
+    +int sort_order
+  }
+
+  class CatalogField {
+    +int id PK
+    +int catalog_item_id FK
+    +string field_name
+    +string field_label
+    +FieldType field_type
+    +jsonb options
+    +bool is_required
+    +string placeholder
+  }
+
+  class Approval {
+    +int id PK
+    +int ticket_id FK
+    +int approver_id FK
+    +ApprovalStatus status
+    +text comment
+    +timestamptz requested_at
+    +timestamptz resolved_at
+  }
+
+  class OnCallSchedule {
+    +int id PK
+    +int user_id FK
+    +timestamptz start_time
+    +timestamptz end_time
+    +string label
+    +int created_by FK
+  }
+
+  class TimeEntry {
+    +int id PK
+    +int ticket_id FK
+    +int user_id FK
+    +string user_name
+    +int minutes
+    +text description
+  }
+
+  class Problem {
+    +int id PK
+    +string title
+    +text description
+    +ProblemStatus status
+    +text root_cause
+    +text workaround
+    +text resolution
+    +int assigned_to_user_id FK
+    +int created_by_user_id FK
+    +timestamptz resolved_at
+  }
+
+  class ProblemTicket {
+    +int id PK
+    +int problem_id FK
+    +int ticket_id FK
+  }
+
+  class ChangeRequest {
+    +int id PK
+    +string title
+    +text description
+    +ChangeType type
+    +RiskLevel risk_level
+    +ChangeStatus status
+    +int requester_id FK
+    +text implementation_plan
+    +text rollback_plan
+    +text affected_systems
+    +timestamptz maintenance_window_start
+    +timestamptz maintenance_window_end
+  }
+
+  class ChangeApproval {
+    +int id PK
+    +int change_id FK
+    +int approver_id FK
+    +ApprovalStatus status
+    +text comment
+    +timestamptz reviewed_at
+  }
+
+  class ChangeTicket {
+    +int change_id FK
+    +int ticket_id FK
+  }
+
+  class BusinessHoursConfig {
+    +int id PK = 1
+    +int start_hour
+    +int end_hour
+    +int[] work_days
+    +string timezone
+  }
+
+  class SlaDefinition {
+    +int id PK
+    +string name
+    +SlaType type
+    +text description
+    +int target_minutes
+    +text[] priority_filter
+    +text[] category_filter
+    +bool is_active
+    +bool applies_business_hours
+  }
+
+  class TicketSla {
+    +int id PK
+    +int ticket_id FK
+    +int definition_id FK
+    +SlaStatus status
+    +timestamptz started_at
+    +timestamptz paused_at
+    +timestamptz breached_at
+    +timestamptz met_at
+    +int business_minutes_used
+    +bool alert_at_risk_sent
+    +bool alert_breach_sent
+  }
+
+  class Department {
+    +int id PK
+    +string name UNIQUE
+    +string code UNIQUE
+    +text description
+    +int head_user_id FK
+    +int parent_department_id FK
+    +bool is_active
+  }
+
+  class Team {
+    +int id PK
+    +string name
+    +int department_id FK
+    +int team_lead_id FK
+    +text description
+    +bool is_active
+  }
+
+  class TeamMember {
+    +int id PK
+    +int team_id FK
+    +int user_id FK
+    +bool is_lead
+    +timestamptz joined_at
+  }
+
+  class Skill {
+    +int id PK
+    +string name UNIQUE
+    +string category
+    +text description
+    +bool is_active
+  }
+
+  class UserSkill {
+    +int id PK
+    +int user_id FK
+    +int skill_id FK
+    +int proficiency_level (1..5)
+    +text notes
+    +int verified_by FK
+    +timestamptz verified_at
+  }
+
+  class TicketRequiredSkill {
+    +int id PK
+    +int ticket_id FK
+    +int skill_id FK
+    +int required_proficiency
+  }
+
+  class AgentStatusLog {
+    +int id PK
+    +int user_id FK
+    +Status status
+    +Status previous_status
+    +text reason
+    +int set_by_user_id FK
+    +bool is_automatic
+    +timestamptz started_at
+    +timestamptz ended_at
+  }
+
+  class WorkSchedule {
+    +int id PK
+    +int user_id FK UNIQUE
+    +ScheduleType schedule_type
+    +int start_hour
+    +int end_hour
+    +int[] work_days
+    +string timezone
+    +string shift_label
+    +date effective_from
+    +date effective_until
+    +int set_by FK
+  }
+
+  class Permission {
+    +int id PK
+    +string resource
+    +string action
+    +text description
+  }
+
+  class RolePermission {
+    +int id PK
+    +Role role
+    +int permission_id FK
+  }
+
+  class UserPermission {
+    +int id PK
+    +int user_id FK
+    +int permission_id FK
+    +bool granted
+    +int granted_by FK
+    +text reason
+    +timestamptz expires_at
+  }
+
+  User "1" --o "0..*" Ticket : creates
+  User "1" --o "0..*" Ticket : assigned to
+  Ticket "1" --o "0..*" Escalation
+  Ticket "1" --o "0..*" TicketComment
+  Ticket "1" --o "0..*" TimeEntry
+  Ticket "0..1" --> "0..1" KbArticle : links to
+  KbArticle "1" --o "0..*" KbTag
+  KbArticle "0..1" --> "0..1" Ticket : source
+  Ticket "0..*" --o "0..1" CatalogItem
+  CatalogItem "1" --o "0..*" CatalogField
+  Ticket "1" --o "0..*" Approval
+  User "1" --o "0..*" Approval : approves
+  User "1" --o "0..*" Notification
+  Ticket "0..1" --o "0..*" Notification
+  Ticket "1" --o "0..*" SlaAlert
+  Ticket "1" --o "0..*" TicketSla
+  SlaDefinition "1" --o "0..*" TicketSla
+  User "1" --o "0..*" OnCallSchedule
+  User "1" --o "0..*" TimeEntry
+  User "1" --o "0..*" Problem : creates
+  User "1" --o "0..*" Problem : assigned
+  Problem "1" --o "0..*" ProblemTicket
+  Ticket "1" --o "0..*" ProblemTicket
+  User "1" --o "0..*" ChangeRequest : requests
+  ChangeRequest "1" --o "0..*" ChangeApproval
+  ChangeRequest "1" --o "0..*" ChangeTicket
+  Ticket "1" --o "0..*" ChangeTicket
+  Department "1" --o "0..*" Team
+  Department "0..1" --> "0..1" User : head
+  Department "0..1" --> "0..1" Department : parent
+  Team "1" --o "0..*" TeamMember
+  User "1" --o "0..*" TeamMember
+  User "0..1" --> "0..1" Department
+  User "0..1" --> "0..1" Team
+  User "0..1" --> "0..1" User : manager
+  Skill "1" --o "0..*" UserSkill
+  User "1" --o "0..*" UserSkill
+  Skill "1" --o "0..*" TicketRequiredSkill
+  Ticket "1" --o "0..*" TicketRequiredSkill
+  User "1" --o "0..*" AgentStatusLog
+  User "1" --> "0..1" WorkSchedule
+  Permission "1" --o "0..*" RolePermission
+  Permission "1" --o "0..*" UserPermission
+  User "1" --o "0..*" UserPermission
+    </div>
+  </div>
+
+  <div class="legend">
+    <span><span class="dot" style="background:#7aa2ff"></span> Aggregation (owns / has)</span>
+    <span><span class="dot" style="background:#5eead4"></span> Reference / FK</span>
+    <span><span class="dot" style="background:#fbbf24"></span> Enum-constrained column</span>
+  </div>
+</section>
+
+<!-- ============================= USERS ============================= -->
+<section id="users">
+  <h2>3 · Users, Roles &amp; Access</h2>
+  <p class="subtitle">Seven roles, tiered privileges, plus per-user permission overrides (RBAC).</p>
+
+  <div class="grid grid-2">
+    <div class="card">
+      <div class="mermaid">
+flowchart TB
+  A["admin<br/>full system control"]:::admin
+  M["manager<br/>team + reporting + approvals"]:::mgr
+  G["agent<br/>Tier 1: intake, triage, escalate"]:::agent
+  T["technician<br/>Tier 2: fulfilment"]:::tech
+  S["specialist<br/>KB curator + expert"]:::spec
+  H["hr<br/>requester (people ops)"]:::hr
+  C["client<br/>external requester"]:::client
+
+  A --> M --> G
+  G --> T
+  G --> S
+  H -.-> G
+  C -.-> G
+
+  classDef admin fill:#fecaca,stroke:#991b1b,color:#7f1d1d
+  classDef mgr fill:#fed7aa,stroke:#9a3412,color:#7c2d12
+  classDef agent fill:#a7f3d0,stroke:#065f46,color:#064e3b
+  classDef tech fill:#a5c7f3,stroke:#1e40af,color:#1e3a8a
+  classDef spec fill:#c4b5fd,stroke:#5b21b6,color:#4c1d95
+  classDef hr fill:#fda4af,stroke:#9f1239,color:#881337
+  classDef client fill:#86efac,stroke:#166534,color:#14532d
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-top:0;color:var(--accent2)">Role → Capability Matrix</h3>
+      <table>
+        <thead><tr><th>Capability</th><th>admin</th><th>manager</th><th>agent</th><th>tech</th><th>spec</th><th>hr</th><th>client</th></tr></thead>
+        <tbody>
+          <tr><td>View all tickets</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td><td>—</td><td>—</td></tr>
+          <tr><td>View own tickets only</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>✅</td><td>✅</td></tr>
+          <tr><td>Create ticket</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td></tr>
+          <tr><td>Escalate ticket</td><td>✅</td><td>✅</td><td>✅</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+          <tr><td>Resolve / close</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td><td>—</td><td>—</td></tr>
+          <tr><td>Manage KB</td><td>✅</td><td>✅</td><td>—</td><td>—</td><td>✅</td><td>—</td><td>—</td></tr>
+          <tr><td>Convert to KB</td><td>✅</td><td>✅</td><td>✅</td><td>—</td><td>✅</td><td>—</td><td>—</td></tr>
+          <tr><td>Approve service requests</td><td>✅</td><td>✅</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+          <tr><td>Manage users / RBAC</td><td>✅</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+          <tr><td>Set on-call schedule</td><td>✅</td><td>✅</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+          <tr><td>Change agent status</td><td>self+reports</td><td>self+reports</td><td>self</td><td>self</td><td>self</td><td>—</td><td>—</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0;color:var(--accent2)">Authentication &amp; Authorisation Flow</h3>
+    <div class="mermaid">
+sequenceDiagram
+  actor U as User (browser)
+  participant FE as React SPA
+  participant API as Express API
+  participant DB as Postgres
+  U->>FE: POST /login (email, password)
+  FE->>API: POST /api/auth/login
+  API->>DB: SELECT users WHERE email=?
+  DB-->>API: user row + password_hash
+  API->>API: bcrypt.compare()
+  API->>API: jwt.sign({userId, email, role, name, department})
+  API-->>FE: Set-Cookie: dispatchly_token (HttpOnly, 24h)
+  FE->>API: fetch /api/auth/me (with cookie)
+  API->>API: requireAuth → jwt.verify
+  API-->>FE: { user }
+  FE->>FE: AuthContext.setUser · RoleGate protects pages
+  Note over FE,API: All future requests carry the cookie.<br/>requireRole(...) enforces per-endpoint role.<br/>RBAC middleware also checks<br/>user_permissions overrides.
+    </div>
+  </div>
+</section>
+
+<!-- ============================= COMPONENTS ============================= -->
+<section id="components">
+  <h2>4 · Component / Deployment Architecture</h2>
+  <p class="subtitle">Every module and how the request travels front → back → DB.</p>
+
+  <div class="card">
+    <div class="mermaid">
+flowchart TB
+  subgraph BROWSER["🖥 Browser"]
+    subgraph REACT["React 19 SPA"]
+      MAIN[main.jsx]
+      APP[App.jsx · createBrowserRouter]
+      subgraph CTX["Context"]
+        AC[AuthContext]
+      end
+      subgraph LAY["Layout"]
+        L1[Layout.jsx]
+        L2[Sidebar.jsx]
+      end
+      subgraph UI["UI Primitives"]
+        UI1[Badge]
+        UI2[EmptyState]
+        UI3[NotificationBell]
+        UI4[SlaBar]
+        UI5[Spinner]
+      end
+      subgraph AUTHC["Auth Guard"]
+        RG[RoleGate.jsx]
+      end
+      subgraph PAGES["Pages · route loaders + actions"]
+        P1[LoginPage]
+        P2[DashboardPage]
+        P3[TicketsPage]
+        P4[TicketDetailPage]
+        P5[NewTicketPage]
+        P6[CatalogPage]
+        P7[KbPage / KbArticlePage]
+        P8[ProblemsPage / Detail]
+        P9[ChangesPage / Detail]
+        P10[OnCallPage]
+        P11[AdminUsersPage]
+        P12[OrgPage]
+        P13[AgentStatusPage]
+        P14[SkillsPage]
+        P15[SchedulesPage]
+      end
+    end
+  end
+
+  subgraph SERVER["🖧 Node.js Express Server (port 3001)"]
+    IDX[index.js<br/>app.listen]
+    MW1[cors + cookieParser + json]
+    MW2[requireAuth]
+    MW3[requireRole / RBAC]
+
+    subgraph ROUTES["routes/"]
+      RT1[auth.js]
+      RT2[tickets.js]
+      RT3[kb.js]
+      RT4[dashboard.js]
+      RT5[users.js]
+      RT6[notifications.js]
+      RT7[catalog.js]
+      RT8[email.js]
+      RT9[oncall.js]
+      RT10[problems.js]
+      RT11[changes.js]
+      RT12[departments.js]
+      RT13[skills.js]
+      RT14[agentStatus.js]
+    end
+
+    subgraph CTRL["controllers/"]
+      C1[authController]
+      C2[ticketController]
+      C3[kbController]
+      C4[dashboardController]
+      C5[userController]
+      C6[notificationController]
+      C7[catalogController]
+      C8[emailController]
+      C9[oncallController]
+      C10[problemController]
+      C11[changeController]
+      C12[departmentController]
+      C13[skillController]
+      C14[agentStatusController]
+      C15[approvalController]
+      C16[timeController]
+    end
+
+    subgraph SVCS["services/"]
+      S1[slaMonitor · cron 5m]
+      S2[scheduleManager · cron 1m]
+      S3[emailPoller · cron 2m]
+      S4[emailService]
+      S5[skillsRouter]
+      S6[notifier]
+      S7[emailNotifier · SMTP]
+    end
+
+    subgraph DBLAYER["db/"]
+      DBP[pool.js · pg.Pool]
+      DBM[migrate.js · schema_migrations]
+      DBS[seed.js]
+    end
+
+    subgraph UTIL["utils/"]
+      UT[sla.js · computeSla · computeTicketSla · setBusinessHoursConfig]
+    end
+  end
+
+  subgraph EXTERN["🌐 External"]
+    PG[(PostgreSQL 18)]
+    SMTPX[[SMTP / IMAP mailbox]]
+  end
+
+  MAIN --> APP --> PAGES
+  APP --> LAY
+  LAY --> UI
+  APP --> AUTHC
+  APP --> CTX
+  PAGES -- "loader / action<br/>fetch('/api/...')" --> MW1
+  MW1 --> MW2 --> MW3 --> ROUTES
+  ROUTES --> CTRL
+  CTRL --> DBP
+  CTRL --> UT
+  CTRL --> S6
+  S1 --> DBP
+  S1 --> S6
+  S2 --> DBP
+  S2 --> S6
+  S3 --> S4
+  S4 --> DBP
+  S5 --> DBP
+  S6 --> DBP
+  S6 --> S7
+  S7 --> SMTPX
+  S3 --> SMTPX
+  DBP --> PG
+  DBM --> PG
+
+  style BROWSER fill:#eff6ff,stroke:#3b82f6
+  style SERVER fill:#f0fdf4,stroke:#22c55e
+  style EXTERN fill:#faf5ff,stroke:#a855f7
+    </div>
+  </div>
+</section>
+
+<!-- ============================= API ============================= -->
+<section id="api">
+  <h2>5 · REST API Surface</h2>
+  <p class="subtitle">14 route files, ~70 endpoints. All require the JWT cookie except <code>/api/auth/login</code>.</p>
+
+  <div class="card">
+    <table>
+      <thead><tr><th>Base path</th><th>Endpoints</th><th>Roles</th></tr></thead>
+      <tbody>
+        <tr><td><code>/api/auth</code></td>
+          <td>POST <code>/login</code> · POST <code>/logout</code> · GET <code>/me</code></td>
+          <td>public / any</td></tr>
+        <tr><td><code>/api/users</code></td>
+          <td>GET · POST · PATCH <code>/:id</code> · DELETE <code>/:id</code></td>
+          <td>admin (+ manager: reports)</td></tr>
+        <tr><td><code>/api/tickets</code></td>
+          <td>GET (filterable) · POST · GET <code>/:id</code> · PATCH · POST <code>/:id/escalate</code> · POST <code>/:id/comments</code> · POST <code>/:id/convert-to-kb</code> · POST <code>/:id/accept</code> / <code>/decline</code> · POST <code>/:id/time</code> · POST <code>/:id/approvals</code></td>
+          <td>staff (requesters see own only)</td></tr>
+        <tr><td><code>/api/kb</code></td>
+          <td>GET (search) · POST · GET <code>/:id</code> · PATCH · DELETE</td>
+          <td>read: any · write: admin/manager/specialist</td></tr>
+        <tr><td><code>/api/dashboard</code></td>
+          <td>GET (aggregated stats)</td>
+          <td>staff</td></tr>
+        <tr><td><code>/api/notifications</code></td>
+          <td>GET · PATCH <code>/:id/read</code> · POST <code>/mark-all-read</code></td>
+          <td>any (own only)</td></tr>
+        <tr><td><code>/api/catalog</code></td>
+          <td>GET items · GET <code>/:id</code> (with fields) · POST · PATCH · DELETE</td>
+          <td>read: any · write: admin</td></tr>
+        <tr><td><code>/api/email</code></td>
+          <td>POST <code>/webhook</code> (inbound email → ticket)</td>
+          <td>public (signed)</td></tr>
+        <tr><td><code>/api/oncall</code></td>
+          <td>GET current · GET schedule · POST · DELETE <code>/:id</code></td>
+          <td>admin / manager</td></tr>
+        <tr><td><code>/api/problems</code></td>
+          <td>GET · POST · GET <code>/:id</code> · PATCH · POST <code>/:id/link-ticket</code></td>
+          <td>staff</td></tr>
+        <tr><td><code>/api/changes</code></td>
+          <td>GET · POST · GET <code>/:id</code> · PATCH · POST <code>/:id/approve</code> / <code>/reject</code></td>
+          <td>staff (CAB: admin/manager)</td></tr>
+        <tr><td><code>/api/departments</code></td>
+          <td>GET tree · POST · PATCH · GET teams · POST team member</td>
+          <td>admin / manager (read: any)</td></tr>
+        <tr><td><code>/api/skills</code></td>
+          <td>GET skills · POST · GET user-skills · POST · PATCH proficiency · POST verify</td>
+          <td>manager/admin (write) · self (own)</td></tr>
+        <tr><td><code>/api/agent-status</code></td>
+          <td>GET current · POST set · GET history · GET team</td>
+          <td>self · manager for reports</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ============================= WORKFLOWS ============================= -->
+<section id="workflows">
+  <h2>6 · Core Workflows &amp; State Machines</h2>
+  <p class="subtitle">State transitions that govern tickets, changes, problems and agent status.</p>
+
+  <div class="grid grid-2">
+    <div class="card">
+      <h3 style="margin-top:0;color:var(--accent2)">Ticket lifecycle</h3>
+      <div class="mermaid">
+stateDiagram-v2
+  [*] --> New : create<br/>(portal / email / catalog)
+  New --> PendingApproval : requires_approval
+  PendingApproval --> InProgress : approved
+  PendingApproval --> Closed : rejected
+  New --> InProgress : agent picks up
+  InProgress --> Escalated : escalate()
+  Escalated --> InProgress : Tier 2 accepts
+  InProgress --> Resolved : resolve(notes)
+  Escalated --> Resolved : resolve(notes)
+  Resolved --> Closed : requester confirms / 3-day auto-close
+  Resolved --> InProgress : reopened
+  Closed --> [*]
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-top:0;color:var(--accent2)">Change Request (CAB) flow</h3>
+      <div class="mermaid">
+stateDiagram-v2
+  [*] --> Draft
+  Draft --> Submitted : submit()
+  Submitted --> Approved : all CAB approvers approve
+  Submitted --> Rejected : any reject
+  Approved --> InProgress : maintenance window start
+  InProgress --> Completed : verified
+  Draft --> Cancelled
+  Submitted --> Cancelled
+  Cancelled --> [*]
+  Rejected --> [*]
+  Completed --> [*]
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-top:0;color:var(--accent2)">Problem lifecycle</h3>
+      <div class="mermaid">
+stateDiagram-v2
+  [*] --> Open
+  Open --> InInvestigation : assign()
+  InInvestigation --> KnownError : workaround identified
+  KnownError --> Resolved : permanent fix deployed
+  InInvestigation --> Resolved : fix confirmed
+  Resolved --> Closed
+  Closed --> [*]
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-top:0;color:var(--accent2)">Agent status machine (scheduleManager)</h3>
+      <div class="mermaid">
+stateDiagram-v2
+  [*] --> offline
+  offline --> on_duty : login (within shift)
+  offline --> off_duty : login (out of shift)
+  off_duty --> on_duty : shift start (cron)
+  on_duty --> available : manual
+  available --> busy : ticket assigned
+  busy --> available : ticket resolved
+  on_duty --> break
+  on_duty --> lunch
+  on_duty --> meeting
+  on_duty --> training
+  on_duty --> on_call : on-call slot starts
+  on_call --> off_duty : slot ends
+  on_duty --> off_duty : shift end (cron)
+  * --> offline : logout
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0;color:var(--accent2)">End-to-end ticket sequence — email intake, auto-routing, SLA breach</h3>
+    <div class="mermaid">
+sequenceDiagram
+  autonumber
+  actor R as Requester (client)
+  participant M as Mailbox (IMAP)
+  participant EP as emailPoller (cron 2m)
+  participant ES as emailService
+  participant SR as skillsRouter
+  participant N as notifier
+  participant SLA as slaMonitor (cron 5m)
+  participant DB as Postgres
+  actor A as Agent (Tier 1)
+  actor T2 as Tier 2 Team
+
+  R->>M: sends email to helpdesk@
+  EP->>M: fetch unread
+  EP->>ES: createTicketFromEmail()
+  ES->>DB: INSERT tickets (source='email', priority=P3, sla=480)
+  ES->>SR: findBestAgent(ticket)
+  SR->>DB: score agents (status · skills · workload · dept)
+  SR-->>ES: userId
+  ES->>DB: UPDATE tickets SET assigned_to_user_id
+  ES->>N: notify(agent, 'ticket_assigned')
+  N->>DB: INSERT notifications
+  N->>N: send SMTP email
+  A->>DB: PATCH tickets/:id → In Progress
+  Note over SLA,DB: every 5m
+  SLA->>DB: SELECT open tickets
+  SLA->>SLA: computeSla() ≥ 75% → at_risk
+  SLA->>DB: INSERT sla_alerts
+  SLA->>N: notifyMany(managers, 'sla_at_risk')
+  SLA->>SLA: 100% elapsed → breached
+  SLA->>DB: UPDATE tickets SET status='Escalated'
+  SLA->>N: notifyMany([agent, managers], 'sla_breached')
+  T2->>DB: accept + resolve
+  DB-->>R: (email + in-app) resolution notification
+    </div>
+  </div>
+</section>
+
+<!-- ============================= SERVICES ============================= -->
+<section id="services">
+  <h2>7 · Background Services &amp; Cron Jobs</h2>
+  <p class="subtitle">All boot from <code>backend/src/index.js</code> after DB connect.</p>
+
+  <div class="card">
+    <table>
+      <thead><tr><th>Service</th><th>Cadence</th><th>Reads</th><th>Writes</th><th>Side effects</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>slaMonitor</code></td>
+          <td>every 5 min</td>
+          <td>tickets, ticket_slas, sla_definitions, business_hours_config</td>
+          <td>sla_alerts, ticket_slas, tickets (auto-escalate)</td>
+          <td>notifier → managers/agent (in-app + SMTP)</td>
+        </tr>
+        <tr>
+          <td><code>scheduleManager</code></td>
+          <td>every 1 min</td>
+          <td>work_schedules, oncall_schedules, users</td>
+          <td>users.current_status, agent_status_log</td>
+          <td>state transitions (on_duty ↔ off_duty ↔ on_call)</td>
+        </tr>
+        <tr>
+          <td><code>emailPoller</code></td>
+          <td>every 2 min</td>
+          <td>IMAP mailbox</td>
+          <td>tickets (source=email), notifications</td>
+          <td>calls emailService.createTicketFromEmail</td>
+        </tr>
+        <tr>
+          <td><code>emailService</code></td>
+          <td>on demand</td>
+          <td>tickets (dedupe by message_id)</td>
+          <td>tickets</td>
+          <td>invokes skillsRouter for auto-assign</td>
+        </tr>
+        <tr>
+          <td><code>skillsRouter</code></td>
+          <td>on demand</td>
+          <td>users, user_skills, ticket_required_skills, tickets</td>
+          <td>tickets.assigned_to_user_id</td>
+          <td>scoring: status · skill fit · workload · dept</td>
+        </tr>
+        <tr>
+          <td><code>notifier</code></td>
+          <td>on demand</td>
+          <td>users.email</td>
+          <td>notifications</td>
+          <td>emailNotifier · SMTP send</td>
+        </tr>
+        <tr>
+          <td><code>emailNotifier</code></td>
+          <td>on demand</td>
+          <td>—</td>
+          <td>—</td>
+          <td>nodemailer SMTP (silently no-op if SMTP_HOST unset)</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0;color:var(--accent2)">SLA calculation dependency graph</h3>
+    <div class="mermaid">
+flowchart LR
+  BH[business_hours_config] --> UT[utils/sla.js]
+  SD[sla_definitions] --> UT
+  T[tickets] --> UT
+  TS[ticket_slas] --> UT
+  UT --> SM[slaMonitor]
+  SM --> AL[sla_alerts]
+  SM --> N[notifier]
+  N --> NT[notifications]
+  N --> EM[emailNotifier · SMTP]
+  SM -- ">100% + auto-escalate" --> T
+    </div>
+  </div>
+</section>
+
+<div class="footer">
+  Generated for the Dispatchly project · maps 22 migrations, 15 controllers, 14 route files, 7 services, and 15 pages.
+</div>
+
+</main>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'base',
+    themeVariables: {
+      background: '#ffffff',
+      primaryColor: '#e0e7ff',
+      primaryTextColor: '#1e1b4b',
+      primaryBorderColor: '#4f46e5',
+      lineColor: '#4b5563',
+      secondaryColor: '#fef3c7',
+      tertiaryColor: '#f0fdf4',
+      fontFamily: '-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif',
+      fontSize: '13px'
+    },
+    flowchart: { htmlLabels: true, curve: 'basis' },
+    sequence: { actorMargin: 40, mirrorActors: false }
+  });
+
+  const tabs = document.querySelectorAll('nav.tabs button');
+  const sections = document.querySelectorAll('main section');
+  tabs.forEach(btn => btn.addEventListener('click', () => {
+    tabs.forEach(b => b.classList.remove('active'));
+    sections.forEach(s => s.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.tab).classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }));
+</script>
+</body>
+</html>
